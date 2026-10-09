@@ -214,6 +214,19 @@ check('弹窗渲染路径稳定（可重复渲染）', selectedTree !== null)
 check('源码里档位按钮行挂在弹窗底部（讲给谁听）', /'讲给谁听'/.test(raw) && /levelButtons/.test(raw))
 check('切档函数存在且带重讲', /function switchLevel\(nextLevel\)/.test(raw) && /retell\(nextLevel\)/.test(raw))
 
+// ---- F. 「新建为对话」的交接单基调：待命，不催促展开 ----
+check('交接单末尾是待命指令（只回一句，别总结/提问/展开）',
+  /不要总结、不要提问、不要展开/.test(raw))
+check('旧的催促句「请就以上内容继续深入」已彻底移除',
+  !/请就以上内容继续深入/.test(raw),
+  /请就以上内容继续深入/.test(raw) ? '仍能找到旧句' : '')
+check('交接单开头点明性质：先把背景收好、等用户的问题',
+  /先把这些背景收好/.test(raw))
+check('按钮悬停说明写明「先记住背景、等您开口」',
+  /先记住背景、等您开口/.test(raw))
+check('交接单仍完整带回：原文、所在消息、已进行的问答',
+  /## 选中的原文/.test(raw) && /## 这段原文所在的完整消息/.test(raw) && /## 已进行的解释与追问/.test(raw))
+
 // ---- E. 弹窗「已划词 + 已有问答」的完整渲染（含手写 Markdown 渲染器）----
 // useState 调用次序：selected, panel, thread, answer, loading, error, input, busyNewChat, web, file, level
 const answered = loadModule(withHook, {
