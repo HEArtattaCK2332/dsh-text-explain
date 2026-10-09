@@ -1,0 +1,26 @@
+{
+  "name": "dsh-text-explain",
+  "version": "0.1.0",
+  "description": "Select text in a DeepSeek Harness conversation and explain it with AI in a small floating window.",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,8 @@
+# dsh-text-explain bundle patch: one dual-face plugin row.
+# Host half registers the /api/text-explain streaming route.
+# Client half is discovered through the package manifest's dsh.client
+# declaration and renders the selection popup in shell.overlay.
+
+- insert:
+    - id: text-explain
+      name: 'dsh-text-explain'
