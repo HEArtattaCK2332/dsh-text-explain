@@ -11,9 +11,11 @@ questions about the explanation.
   同样一句「最后由它打款」，带语境就知道「它」指财务部门。
 - **难度旋钮（讲给谁听）**：同一段话，四档切换——**小白 / 通识 / 专业 / 深研**，默认「小白」。
   在弹窗里点一下换个档位，它会**立刻用新档位重讲一遍**：同一句话，前一眼满是生活比方，
-  后一眼全是工程术语。档位换过就记为默认，也能在设置里改。
-- **新建为对话**：弹窗底部的 **✦ 新建为对话** 按钮，把这次问答（原文＋所在消息＋
-  已进行的解释与追问）整理成一份自包含文档，注入一个新会话并自动跳过去，方便继续深入。
+  后一眼全是工程术语。弹窗里这一下只管本次；要「以后都这样」，到设置页选好再按保存。
+- **新建为对话（待命式交接）**：弹窗底部的 **✦ 新建为对话** 按钮，把这次问答（原文＋
+  所在消息＋已进行的解释与追问）整理成一份「交接单」，注入一个新会话并自动跳过去。
+  **新会话只会回一句「背景已了解，等你开口」**——不总结、不提问、不展开，话由您起头。
+  道理简单：您既然点过「解释」或「追问」，到了新会话多半是要换件事做，而不是再听一遍。
 - **Markdown 渲染**：解释与回答按 Markdown 展示——标题、列表、引用、代码块、
   **表格**、链接等都能正确渲染（手写零依赖渲染器，React 元素构建，天然防 XSS）。
 - **联网搜索**：开启「联网」后，模型可调用 `web_search`（走 Bing RSS 搜索）和
@@ -74,7 +76,11 @@ Then restart the Web profile so the new bundle layer is loaded.
    **📄 读文件** at the bottom of the popup before asking.
 6. When the thread is worth pursuing, click **✦ 新建为对话** — the whole
    exchange (original selection + source message + explanation + follow-ups)
-   lands in a new session, which opens automatically.
+   lands in a new session as a **handoff**, and that session opens
+   automatically. It answers with a single line (「背景已了解，等你开口」) and
+   then waits: no summary, no questions, no expansion. Speak up there whenever
+   you want it to dig in — you have already had your explanation, so re-telling
+   it was never the point.
 7. Open **设置 → 划词解释** for the defaults: which workspace a new session lands
    in, the default depth, and (folded under 「高级设置」) whether 联网 / 读文件
    start on. Settings live in the host's own config file; edits wait in a draft
