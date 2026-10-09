@@ -6,8 +6,9 @@
 conversation — a term, an error message, a wall of jargon — and get it explained
 in plain words, right where you are reading.
 
-> 🎬 **Demo (20 seconds):** select → explain → switch depth → hand off.
-> Recording pending; the GIF will live at `assets/demo.gif` and appear here.
+![Demo: select a confusing passage, read the plain-words explanation, ask a follow-up, then hand the thread to a new session](assets/demo.gif)
+
+*40 seconds, unedited: a Godot build file explained as 「`.exe` is the cow, `.pck` is the suitcase — the cow and the suitcase have to travel together」, followed by two follow-up questions.*
 
 ## Why this exists
 
