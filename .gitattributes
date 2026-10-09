@@ -1,0 +1,9 @@
+# 文本文件一律以 LF 存进仓库，避免 Windows / Linux 来回 checkout 时行尾抖动
+* text=auto eol=lf
+
+# 图片（README 的演示 GIF、市场用的截图）按二进制处理，别做行尾转换
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
