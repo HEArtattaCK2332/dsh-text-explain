@@ -203,6 +203,20 @@ if (fs.existsSync(firefoxManifestPath)) {
 check('Firefox：仓库里有生成脚本（可重复执行）',
   fs.existsSync(path.join(extDir, 'build-firefox-manifest.cjs')))
 
+// 9) 「联网搜索」按钮：强制触发一次联网
+check('content.js：有「联网搜索」按钮',
+  contentSource.includes('🌐 联网搜索') && contentSource.includes('forceWebSearch'))
+check('content.js：强制联网时去掉末尾回答、重发最后一问',
+  contentSource.includes("pendingForceTool = 'web'") && contentSource.includes('conversation.pop()'))
+check('content.js：请求带上 forceTool',
+  contentSource.includes('forceTool: forceToolForThisRequest'))
+check('content.js：等联网时状态文案会变（让用户知道它在查）',
+  contentSource.includes('正在联网查'))
+check('background.js：透传 forceTool',
+  bgSource.includes('job.forceTool'))
+check('background.js：没设 forceTool 时不发该字段（请求保持干净）',
+  bgSource.includes('forceTool === null ? {} : { forceTool: forceTool }'))
+
 const failed = results.filter((item) => !item.ok)
 console.log(`\n合计 ${results.length} 项，失败 ${failed.length} 项`)
 process.exit(failed.length === 0 ? 0 : 1)

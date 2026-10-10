@@ -49,6 +49,7 @@
   var pinned = false
   var conversation = [] // [{ role: 'user' | 'assistant', content }]
   var pageContext = null
+  var pendingForceTool = null // 下一次请求要强制用的工具（「联网搜索」按钮设的）
   var activeRequestId = null
 
   function normalizeLevel(value) {
@@ -411,11 +412,41 @@
     inputRow.appendChild(sendEl)
     panelEl.appendChild(inputRow)
 
+    /**
+     * 「联网搜索」：让模型**现在就去查一次**，查完只补充新东西。
+     *
+     * 时机和 DSH 里那个按钮一样——是「已经看过一遍解释之后」才点的：
+     * 用户想借工具挖得更透，不是想听同样的东西再讲一遍。后端据此追加
+     * 一段「先查证、不复述」的指令。
+     */
+    function forceWebSearch() {
+      while (conversation.length > 0 && conversation[conversation.length - 1].role === 'assistant') {
+        conversation.pop()
+      }
+      if (conversation.length === 0) return
+      pendingForceTool = 'web'
+      renderConversation()
+      ask()
+    }
+
     // 交接：把这次问答（连同网页上下文）交给 DSH 继续。
     // 两种形态由设置决定——「在 DSH 里继续」（默认）或「复制交接单」。
     // 逻辑内联在这里，是为了少一处跨函数的状态；设置现场读取，改了立刻生效。
     var actions = document.createElement('div')
     actions.className = 'dsh-te-actions'
+
+    var webEl = document.createElement('button')
+    webEl.className = 'dsh-te-handoff'
+    webEl.type = 'button'
+    webEl.textContent = '🌐 联网搜索'
+    webEl.title = '让 AI 现在就去联网查一次，把新查到的补给你（不会重复已经讲过的内容）'
+    webEl.addEventListener('click', function (event) {
+      event.preventDefault()
+      event.stopPropagation()
+      forceWebSearch()
+    })
+    actions.appendChild(webEl)
+
     var handoffEl = document.createElement('button')
     handoffEl.className = 'dsh-te-handoff'
     handoffEl.type = 'button'
@@ -527,14 +558,17 @@
     conversation.push({ role: 'assistant', content: '' })
     renderConversation()
     setError('')
-    setStatus('正在解释…')
+    setStatus(pendingForceTool === 'web' ? '正在联网查…' : '正在解释…')
     setBusy(true)
     activeRequestId = 'req-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8)
+    var forceToolForThisRequest = pendingForceTool
+    pendingForceTool = null
     chrome.runtime.sendMessage(
       {
         type: 'text-explain/start',
         requestId: activeRequestId,
         messages: buildMessages(),
+        forceTool: forceToolForThisRequest,
         level: currentLevel
       },
       function (response) {

@@ -85,15 +85,20 @@ function runExplain(job) {
     var outgoing = Array.isArray(job.messages) && job.messages.length > 0
       ? job.messages
       : [{ role: 'user', content: String(job.text || '') }]
+    // 「联网搜索」按钮设的强制标记；没设就不发这个字段，请求保持干净
+    var forceTool = job.forceTool === 'web' || job.forceTool === 'file' ? job.forceTool : null
 
     return fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'text-explain-' + level,
-        messages: outgoing,
-        stream: true
-      })
+      body: JSON.stringify(Object.assign(
+        {
+          model: 'text-explain-' + level,
+          messages: outgoing,
+          stream: true
+        },
+        forceTool === null ? {} : { forceTool: forceTool }
+      ))
     })
       .then(function (response) {
         if (!response.ok) {
@@ -225,6 +230,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     requestId: message.requestId,
     messages: message.messages,
     text: message.text,
+    forceTool: message.forceTool,
     level: message.level
   })
   sendResponse({ ok: true })
