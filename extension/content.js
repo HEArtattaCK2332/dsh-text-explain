@@ -50,6 +50,7 @@
   var conversation = [] // [{ role: 'user' | 'assistant', content }]
   var pageContext = null
   var pendingForceTool = null // 下一次请求要强制用的工具（「联网搜索」按钮设的）
+  var backendMode = 'dsh' // 'dsh' 接本机插件；'custom' 接用户自己的 OpenAI 兼容接口
   var activeRequestId = null
 
   function normalizeLevel(value) {
@@ -435,21 +436,27 @@
     var actions = document.createElement('div')
     actions.className = 'dsh-te-actions'
 
-    var webEl = document.createElement('button')
-    webEl.className = 'dsh-te-handoff'
-    webEl.type = 'button'
-    webEl.textContent = '🌐 联网搜索'
+    // 自带 API 模式下没有联网工具（那是 DSH 的能力），索性不显示这个按钮，
+    // 而不是摆一个点了没用的东西。
+    var webEl = backendMode === 'custom' ? null : document.createElement('button')
+    if (webEl !== null) {
+      webEl.className = 'dsh-te-handoff'
+      webEl.type = 'button'
+      webEl.textContent = '🌐 联网搜索'
     webEl.title = '让 AI 现在就去联网查一次，把新查到的补给你（不会重复已经讲过的内容）'
     webEl.addEventListener('click', function (event) {
       event.preventDefault()
       event.stopPropagation()
       forceWebSearch()
     })
-    actions.appendChild(webEl)
+    }
+    if (webEl !== null) actions.appendChild(webEl)
 
     var handoffEl = document.createElement('button')
     handoffEl.className = 'dsh-te-handoff'
     handoffEl.type = 'button'
+    // 初始文案（之前漏了，按钮在浮窗底部是空白的）
+    handoffEl.textContent = backendMode === 'custom' ? '复制交接单' : '在 DSH 里继续'
     handoffEl.addEventListener('click', function (event) {
       event.preventDefault()
       event.stopPropagation()
@@ -478,7 +485,8 @@
       handoffEl.textContent = '正在交接…'
 
       chrome.storage.local.get({ handoffMode: 'session' }, function (stored) {
-        if (stored.handoffMode === 'clipboard') {
+        // 自带 API 模式没有 DSH 可开新会话，只能复制交接单
+        if (backendMode === 'custom' || stored.handoffMode === 'clipboard') {
           if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(document_).then(function () {
               handoffEl.textContent = '已复制 ✓ 粘进 DSH 新会话即可'
@@ -654,8 +662,11 @@
 
   window.addEventListener('scroll', hideTrigger, true)
 
-  chrome.storage.local.get({ level: 'plain', triggerMode: 'context-menu' }, function (stored) {
-    currentLevel = normalizeLevel(stored.level)
+  chrome.storage.local.get(
+    { level: 'plain', triggerMode: 'context-menu', backend: 'dsh' },
+    function (stored) {
+      backendMode = stored.backend === 'custom' ? 'custom' : 'dsh'
+      currentLevel = normalizeLevel(stored.level)
     triggerMode =
       stored.triggerMode === 'selection-button' || stored.triggerMode === 'both'
         ? stored.triggerMode
@@ -664,6 +675,9 @@
 
   chrome.storage.onChanged.addListener(function (changes, area) {
     if (area !== 'local') return
+    if (changes.backend) {
+      backendMode = changes.backend.newValue === 'custom' ? 'custom' : 'dsh'
+    }
     if (changes.triggerMode) {
       triggerMode =
         changes.triggerMode.newValue === 'selection-button' || changes.triggerMode.newValue === 'both'

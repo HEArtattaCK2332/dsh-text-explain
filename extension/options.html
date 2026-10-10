@@ -8,7 +8,7 @@
       body {
         margin: 0;
         padding: 24px;
-        max-width: 620px;
+        max-width: 640px;
         font: 14px/1.7 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
           "Microsoft YaHei", sans-serif;
         background: #fff;
@@ -31,13 +31,13 @@
       }
       label { display: block; font-weight: 600; margin-bottom: 6px; }
       input, select {
-        width: 100%;
         box-sizing: border-box;
         padding: 8px 10px;
         border: 1px solid #d0d7de;
         border-radius: 8px;
         font: inherit;
       }
+      input[type="text"], input[type="password"], select { width: 100%; }
       .muted { color: #6b7280; font-size: 12.5px; margin-top: 6px; }
       code { background: #eef1f4; padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
       .row { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
@@ -54,10 +54,89 @@
       .ok { color: #15803d; }
       .bad { color: #b91c1c; }
       .id { font-family: ui-monospace, Consolas, monospace; word-break: break-all; }
+      .field { margin-top: 12px; }
+      .hidden { display: none; }
+      .radio { display: flex; align-items: flex-start; gap: 8px; margin: 10px 0; }
+      .radio input { width: auto; margin-top: 6px; flex: 0 0 auto; }
+      .radio span { flex: 1; }
+      .radio b { display: block; }
+      details > summary { cursor: pointer; font-weight: 600; }
     </style>
   </head>
   <body>
     <h1>Text Explain（划词解释）</h1>
+
+    <div class="card">
+      <label>用哪个后端来解释</label>
+
+      <div class="radio">
+        <input type="radio" name="backend" id="backend-dsh" value="dsh" />
+        <span>
+          <b>本机 DeepSeek Harness（推荐）</b>
+          连着电脑上的 DSH 插件。三档讲法由它提供，还能<b>联网搜索</b>，并把整段问答
+          <b>交接给一个新会话</b>。需要 DSH 正在运行。
+        </span>
+      </div>
+
+      <div class="radio">
+        <input type="radio" name="backend" id="backend-custom" value="custom" />
+        <span>
+          <b>我自己的 API</b>
+          接任意 <b>OpenAI 兼容</b>接口：DeepSeek、OpenAI、Gemini、智谱、Kimi，或本机的
+          Ollama / LM Studio。<b>不需要装 DSH</b>；但没有「联网搜索」（那是 DSH 提供的能力），
+          交接改为复制一份 Markdown。
+        </span>
+      </div>
+    </div>
+
+    <div class="card hidden" id="custom-card">
+      <label for="preset">常用服务（选了自动填地址与模型）</label>
+      <select id="preset"></select>
+
+      <div class="field">
+        <label for="customBaseUrl">API 地址（Base URL）</label>
+        <input id="customBaseUrl" type="text" spellcheck="false" placeholder="https://api.deepseek.com/v1" />
+        <div class="muted">填到 <code>/v1</code> 这一层即可，扩展会自动拼上 <code>/chat/completions</code>。</div>
+      </div>
+
+      <div class="field">
+        <label for="customModel">模型名</label>
+        <input id="customModel" type="text" spellcheck="false" placeholder="deepseek-chat" />
+        <div class="muted">
+          按服务商的叫法填，例如 <code>deepseek-chat</code>、<code>gpt-4o-mini</code>、<code>llama3.1</code>。
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="customApiKey">API Key（本地模型可留空）</label>
+        <input id="customApiKey" type="password" spellcheck="false" autocomplete="off" />
+        <div class="muted">
+          只存在这台电脑的浏览器里，不会发往别处。保存时浏览器会请你
+          <b>授权访问上面那个域名</b>——这是 MV3 的规矩：扩展不能事先拿到全网权限，只能按你填的地址逐个申请。
+        </div>
+      </div>
+
+      <details style="margin-top: 14px">
+        <summary>高级</summary>
+        <div class="field">
+          <label>兼容性开关</label>
+          <div class="radio">
+            <input type="checkbox" id="customSystemMerged" />
+            <span>
+              <b>把系统提示并入第一条消息</b>
+              有些本地模型不认 <code>system</code> 角色；勾上它，讲法照样生效。
+            </span>
+          </div>
+          <div class="radio">
+            <input type="checkbox" id="customNoStream" />
+            <span>
+              <b>不用流式输出</b>
+              少数服务不支持 SSE；勾上后整段回答一次性返回（等待感会差些）。
+            </span>
+          </div>
+        </div>
+      </details>
+    </div>
 
     <div class="card">
       <label for="trigger">什么时候出来</label>
@@ -66,19 +145,6 @@
         <option value="selection-button">划词后浮出小按钮 —— 少点一下，但读文章时容易误触</option>
         <option value="both">两者都要</option>
       </select>
-      <div class="muted">
-        选「右键菜单」时不会出现划词小按钮；选中文字后右键，菜单里会有
-        <strong>「用大白话解释『…』」</strong>。
-      </div>
-    </div>
-
-    <div class="card">
-      <label for="endpoint">本机后端地址</label>
-      <input id="endpoint" type="text" spellcheck="false" />
-      <div class="muted">
-        默认是 DSH 的 <code>dsh-text-explain</code> 插件提供的接口。改这里可以把解释请求接到别的
-        OpenAI 兼容服务上。
-      </div>
     </div>
 
     <div class="card">
@@ -88,21 +154,21 @@
         <option value="general">通识 —— 会用电脑、有常识，但没学过这一行</option>
         <option value="pro">专业 —— 同行：术语直接用，讲机制、取舍与边界</option>
       </select>
-      <div class="muted">浮窗里也能随时切，切换后当场重讲。这里设的是新浮窗的默认值。</div>
+      <div class="muted">浮窗里也能随时切，切换后当场重讲。</div>
     </div>
 
-    <details class="card" id="advanced">
-      <summary style="cursor: pointer; font-weight: 600">高级设置</summary>
-
-      <div style="margin-top: 14px">
+    <details class="card">
+      <summary>高级设置</summary>
+      <div class="field">
         <label for="handoff">「交接」按钮做什么</label>
         <select id="handoff">
           <option value="session">在 DSH 里开一个新会话（推荐）—— 背景悄悄放好，会话等你开口</option>
           <option value="clipboard">复制成一份 Markdown 交接单 —— 由你自己粘过去</option>
         </select>
         <div class="muted">
-          浮窗底部那个按钮的行为。选前者会调用本机 DSH 开一个新会话（<strong>不唤醒模型、不花
-          token</strong>），并自动把 DSH 页面切到前台；选后者只往剪贴板里放一段 Markdown。
+          浮窗底部那个按钮的行为。选前者会调用本机 DSH 开一个新会话（<b>不唤醒模型、不花额度</b>），
+          并把 DSH 页面切到前台；选后者只往剪贴板里放一段 Markdown。
+          注意：选了「我自己的 API」时这里只能是复制——没有 DSH 可开会话。
         </div>
       </div>
     </details>
@@ -113,16 +179,19 @@
       <span id="result"></span>
     </div>
 
-    <div class="card" style="margin-top: 18px">
-      <label>本扩展的 ID</label>
-      <div class="id" id="extid">—</div>
-      <div class="muted">
-        本扩展使用固定 ID（由 <code>manifest.json</code> 的 <code>key</code> 推出），所以后端白名单
-        可以预先登记它。若 DSH 那边报「origin not allowed」，把这个 ID 按
-        <code>chrome-extension://&lt;ID&gt;</code> 的格式加进
-        <code>&lt;DSH_HOME&gt;/text-explain/settings.json</code> 的 <code>allowedOrigins</code> 即可。
+    <details class="card" style="margin-top: 18px">
+      <summary>关于本扩展</summary>
+      <div class="field">
+        <label>本扩展的 ID</label>
+        <div class="id" id="extid">—</div>
+        <div class="muted">
+          使用固定 ID（由 <code>manifest.json</code> 的 <code>key</code> 推出），故后端白名单可预先登记它。
+          若 DSH 那边报「origin not allowed」，把下面这个 ID 按
+          <code>chrome-extension://&lt;ID&gt;</code> 的格式加进
+          <code>&lt;DSH_HOME&gt;/text-explain/settings.json</code> 的 <code>allowedOrigins</code> 即可。
+        </div>
       </div>
-    </div>
+    </details>
 
     <script src="options.js"></script>
   </body>

@@ -223,6 +223,51 @@ check('background.js：每处 tabs.sendMessage 都配了 lastError 检查',
   (bgSource.match(/runtime\.lastError/g) || []).length,
   `sendMessage ${(bgSource.match(/tabs\.sendMessage/g) || []).length} 处 / lastError ${(bgSource.match(/runtime\.lastError/g) || []).length} 处`)
 
+// 11) 双模式：本机 DSH 或自己的 OpenAI 兼容接口
+const optionsSource = fs.readFileSync(path.join(extDir, 'options.js'), 'utf8')
+check('manifest：声明了可选主机权限（自定义后端按域名逐次申请）',
+  Array.isArray(manifest.optional_host_permissions) &&
+  manifest.optional_host_permissions.length > 0,
+  JSON.stringify(manifest.optional_host_permissions))
+check('options.html：有「本机 DSH / 我自己的 API」二选一',
+  htmlSource.includes('backend-dsh') && htmlSource.includes('backend-custom'))
+check('options.html：自定义模式有地址 / 模型 / Key 三个输入',
+  htmlSource.includes('id="customBaseUrl"') &&
+  htmlSource.includes('id="customModel"') &&
+  htmlSource.includes('id="customApiKey"'))
+check('options.html：有常用服务预设下拉', htmlSource.includes('id="preset"'))
+check('options.html：两个兼容性开关（并 system / 关流式）',
+  htmlSource.includes('customSystemMerged') && htmlSource.includes('customNoStream'))
+check('options.html：交接方式仍保留在高级设置里',
+  htmlSource.includes('id="handoff"') && htmlSource.includes('value="clipboard"'))
+check('options.js：保存会申请该域名的权限（不预先索取全网）',
+  optionsSource.includes('ensureOriginPermission') && optionsSource.includes('permissions.request'))
+check('options.js：预设含各家服务与本机模型',
+  optionsSource.includes('api.deepseek.com') &&
+  optionsSource.includes('api.openai.com') &&
+  optionsSource.includes('localhost:11434') &&
+  optionsSource.includes('localhost:1234'))
+check('background.js：自定义模式走用户自己的地址、模型与 Key',
+  bgSource.includes('customBaseUrl') &&
+  bgSource.includes('customModel') &&
+  bgSource.includes("'Bearer ' + settings.customApiKey"))
+check('background.js：自带内置三档讲法（自定义模式用）',
+  bgSource.includes('LEVEL_PROMPTS') &&
+  bgSource.includes('plain:') &&
+  bgSource.includes('general:') &&
+  bgSource.includes('pro:') &&
+  bgSource.includes('把读者当成同行'))
+check('background.js：只有 DSH 模式才发 forceTool（联网是 DSH 的能力）',
+  bgSource.includes("if (settings.backend !== 'custom')"))
+check('background.js：支持关流式（少数服务不支持 SSE）',
+  bgSource.includes('target.stream === false'))
+check('content.js：自定义模式不建「联网搜索」按钮',
+  contentSource.includes("backendMode === 'custom' ? null : document.createElement"))
+check('content.js：自定义模式交接按钮文案是「复制交接单」',
+  contentSource.includes("backendMode === 'custom' ? '复制交接单'"))
+check('content.js：交接按钮有初始文字（曾经漏过，是空白的）',
+  contentSource.includes("handoffEl.textContent = backendMode === 'custom'"))
+
 const failed = results.filter((item) => !item.ok)
 console.log(`\n合计 ${results.length} 项，失败 ${failed.length} 项`)
 process.exit(failed.length === 0 ? 0 : 1)

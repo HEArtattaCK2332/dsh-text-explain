@@ -72,6 +72,31 @@ Compress-Archive -Path extension\* -DestinationPath dist\text-explain-firefox.zi
 
 **只取选区附近那一小段，不传整个网页。**
 
+## 双模式：接本机 DSH，或你自己的 API
+
+设置页顶部可以选后端：
+
+| | **本机 DeepSeek Harness**（默认） | **我自己的 API** |
+| --- | --- | --- |
+| 连什么 | 电脑上的 `dsh-text-explain` 插件 | 任意 **OpenAI 兼容**接口：DeepSeek、OpenAI、Gemini、智谱、Kimi，或本机的 Ollama / LM Studio |
+| 三档讲法 | 由插件提供 | **扩展内置**（措辞与插件一致） |
+| 模型名 | `text-explain-plain` 等 | 你填（`deepseek-chat`、`gpt-4o-mini`、`llama3.1`…） |
+| API Key | 不需要 | 需要时填，**本地模型留空即可** |
+| 🌐 联网搜索 | ✅ | ❌ 不出现（联网是 DSH 提供的能力，第三方 API 不带） |
+| 交接 | 可在 DSH 里开新会话 | 复制一份 Markdown 交接单 |
+| 追问、网页上下文 | ✅ | ✅ |
+
+**为什么能兼容各家**：它们讲的是**同一套协议**（OpenAI 的 chat-completions）。扩展不认厂商，只认协议——所以预设里那几家、以及任何自建服务，填上地址就能用。
+
+### 关于权限
+
+MV3 的扩展**不能事先拿到全网权限**。所以本扩展声明的是 `optional_host_permissions`：**你保存自定义地址时，浏览器当场只申请那一个域名**，而不是一上来就要「访问所有网站」。
+
+### 两个兼容性开关（高级）
+
+- **把系统提示并入第一条消息**：有些本地模型不认 `system` 角色，勾上它讲法照样生效。
+- **不用流式输出**：少数服务不支持 SSE，勾上改为整段返回（等待感会差些）。
+
 ## 设置
 
 点扩展图标（或扩展详情页的「扩展程序选项」）打开设置页：
