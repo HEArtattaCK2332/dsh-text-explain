@@ -278,6 +278,113 @@ check('白名单可以清空回默认（跨源再次一律拒绝）',
 const afterClear = await callExplain({ text: '清空后', enableWeb: false, enableFile: false }, { Origin: extensionOrigin })
 check('清空白名单后，扩展来源重新被拒', afterClear.status === 403, `HTTP ${afterClear.status}`)
 
+// 8) 对外 API：OpenAI 兼容层（给 Obsidian / 浏览器扩展 / 任何第三方客户端）
+async function callOpenAi(path, payload, headers) {
+  const init = { method: payload === undefined ? 'GET' : 'POST', headers: Object.assign({}, headers || {}) }
+  if (payload !== undefined) {
+    init.headers['Content-Type'] = 'application/json'
+    init.body = JSON.stringify(payload)
+  }
+  const res = await fetch(`http://127.0.0.1:${port}${path}`, init)
+  return { status: res.status, body: await res.text(), headers: res.headers }
+}
+
+const modelList = await callOpenAi('/api/text-explain/v1/models')
+check('对外 API：GET /v1/models 返回 200', modelList.status === 200, `HTTP ${modelList.status}`)
+const parsedModels = JSON.parse(modelList.body)
+check('对外 API：列出四档 model（text-explain-*）',
+  Array.isArray(parsedModels.data) &&
+  parsedModels.data.map((item) => item.id).join(',') ===
+    'text-explain-plain,text-explain-general,text-explain-pro,text-explain-expert',
+  JSON.stringify(parsedModels.data && parsedModels.data.map((item) => item.id)))
+
+const completion = await callOpenAi('/api/text-explain/v1/chat/completions', {
+  model: 'text-explain-plain',
+  messages: [{ role: 'user', content: '这段话是什么意思' }]
+})
+check('对外 API：非流式补全返回 200', completion.status === 200, `HTTP ${completion.status}`)
+const completionJson = JSON.parse(completion.body)
+check('对外 API：响应是标准 chat.completion 形状',
+  completionJson.object === 'chat.completion' &&
+  typeof completionJson.id === 'string' &&
+  completionJson.choices[0].message.role === 'assistant' &&
+  completionJson.choices[0].message.content.includes('桩回答') &&
+  completionJson.choices[0].finish_reason === 'stop',
+  JSON.stringify(completionJson.choices && completionJson.choices[0] && completionJson.choices[0].message))
+check('对外 API：带 usage 字段（额度统计）',
+  Boolean(completionJson.usage) && typeof completionJson.usage.total_tokens === 'number',
+  JSON.stringify(completionJson.usage))
+
+const beforePro = captured.length
+await callOpenAi('/api/text-explain/v1/chat/completions', {
+  model: 'text-explain-pro',
+  messages: [{ role: 'user', content: '讲讲' }]
+})
+check('对外 API：model 名映射到档位（pro → 同行口吻）',
+  Boolean(captured[beforePro] && captured[beforePro].system.includes('同行')))
+
+const beforeUnknownModel = captured.length
+await callOpenAi('/api/text-explain/v1/chat/completions', {
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: '讲讲' }]
+})
+check('对外 API：认不出的 model 回落默认档（不报错）',
+  Boolean(captured[beforeUnknownModel] && captured[beforeUnknownModel].system.includes('完全不懂 AI')))
+
+const beforeSystem = captured.length
+await callOpenAi('/api/text-explain/v1/chat/completions', {
+  model: 'text-explain-plain',
+  messages: [
+    { role: 'system', content: '你是一个只会写十四行诗的助手' },
+    { role: 'user', content: '讲讲这段话' }
+  ]
+})
+check('对外 API：忽略调用方的 system（讲解风格以本插件为准）',
+  Boolean(captured[beforeSystem] && !captured[beforeSystem].system.includes('十四行诗')))
+check('对外 API：被忽略的 system 不会混进用户消息',
+  Boolean(captured[beforeSystem] && !JSON.stringify(captured[beforeSystem].messages).includes('十四行诗')))
+
+const streamed = await callOpenAi('/api/text-explain/v1/chat/completions', {
+  model: 'text-explain-plain',
+  messages: [{ role: 'user', content: '流式讲讲' }],
+  stream: true
+})
+check('对外 API：stream:true 返回 text/event-stream',
+  streamed.status === 200 && (streamed.headers.get('content-type') || '').includes('text/event-stream'),
+  String(streamed.headers.get('content-type')))
+check('对外 API：流式以 data: [DONE] 收尾', streamed.body.trim().endsWith('data: [DONE]'))
+const firstChunk = streamed.body.split('\n\n')[0]
+check('对外 API：流式分片是标准 chat.completion.chunk',
+  (() => {
+    try {
+      const parsed = JSON.parse(firstChunk.replace(/^data: /, ''))
+      return parsed.object === 'chat.completion.chunk' && typeof parsed.choices[0].delta.content === 'string'
+    } catch (_error) {
+      return false
+    }
+  })(), firstChunk.slice(0, 120))
+
+const badOpenAi = await callOpenAi('/api/text-explain/v1/chat/completions', { model: 'x' })
+check('对外 API：缺 messages 返回 400，错误体是 OpenAI 形状',
+  badOpenAi.status === 400 && JSON.parse(badOpenAi.body).error.message !== undefined,
+  `HTTP ${badOpenAi.status}`)
+
+const openAiNoOrigin = await callOpenAi('/api/text-explain/v1/models')
+check('对外 API：**无 Origin 的客户端（Obsidian 桌面版 / curl）可直接用**',
+  openAiNoOrigin.status === 200, `HTTP ${openAiNoOrigin.status}`)
+
+const strangerOpenAi = await callOpenAi('/api/text-explain/v1/models', undefined, { Origin: 'https://evil.example' })
+check('对外 API：陌生来源一律 403（不替它们烧额度）',
+  strangerOpenAi.status === 403, `HTTP ${strangerOpenAi.status}`)
+
+const openAiPreflight = await fetch(`http://127.0.0.1:${port}/api/text-explain/v1/chat/completions`, {
+  method: 'OPTIONS',
+  headers: { Origin: extensionOrigin, 'Access-Control-Request-Method': 'POST' }
+})
+check('对外 API：非白名单预检回 204，但不给放行头',
+  openAiPreflight.status === 204 && openAiPreflight.headers.get('access-control-allow-origin') === null,
+  `${openAiPreflight.status} / ${openAiPreflight.headers.get('access-control-allow-origin')}`)
+
 server.close()
 fs.rmSync(tempHome, { recursive: true, force: true })
 

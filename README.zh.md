@@ -69,6 +69,24 @@ dsh plugin --profile web add file:<dsh-text-explain 的路径>
 按 **刷新** 则丢掉草稿、重新读一次。**不点保存，磁盘上不会多一个字**——
 配置文件里不会，浏览器里也不会（这个插件在浏览器端不存任何东西）。
 
+## 给别的应用用（对外 API）
+
+宿主半还讲一套 **OpenAI 的 chat-completions 协议**，所以**任何支持自定义接口地址的客户端**
+都能拿它当后端——Obsidian 插件、浏览器扩展、您自己写的小脚本。
+
+```
+接口地址（Base URL）：http://127.0.0.1:3080/api/text-explain/v1
+API Key：随便填一个（或留空）
+模型：text-explain-plain ｜ text-explain-general ｜ text-explain-pro ｜ text-explain-expert
+```
+
+- `GET /models` 列出四档。
+- `POST /chat/completions` 收标准格式，支持 `stream: true`（SSE 流式）。
+- **模型名就是档位**：`text-explain-plain` 是默认口吻（讲给不懂 AI 的人），`-expert` 最深。
+- 调用方传的 `system` **会被刻意忽略**——本插件的立身之本就是「讲法不由调用方决定」。
+- 跨来源调用需登记进 `allowedOrigins`（见设计说明）；而**不带 `Origin` 头**的调用方
+  （Obsidian 桌面版、`curl`、本机脚本）**开箱即用**。
+
 ## 自检
 
 三份「桩测试」随包出货，只依赖 Node 内置模块——不用装测试框架、不用 `npm install`：

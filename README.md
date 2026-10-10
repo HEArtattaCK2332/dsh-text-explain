@@ -86,6 +86,28 @@ draft away and re-reads what is stored. **Nothing you did not save is ever
 written to disk** — not to the config file, not to browser storage (this plugin
 stores nothing in the browser at all).
 
+## Use it from other apps
+
+The host half also speaks the **OpenAI chat-completions protocol**, so any client
+that accepts a custom API base URL can use this plugin as its backend — Obsidian
+plugins, browser extensions, your own scripts.
+
+```
+Base URL : http://127.0.0.1:3080/api/text-explain/v1
+API key  : anything (or leave it empty)
+Model    : text-explain-plain | text-explain-general | text-explain-pro | text-explain-expert
+```
+
+- `GET /models` lists the four depths.
+- `POST /chat/completions` takes the standard shape and supports `stream: true` (SSE).
+- **The model name picks the depth**: `text-explain-plain` is the default voice
+  (for people who don't speak AI), `text-explain-expert` the deepest.
+- A `system` message from the caller is **ignored on purpose** — the whole point
+  of this plugin is that the explanation style is not up to the caller.
+- Cross-origin callers must be listed in `allowedOrigins` (see Design notes).
+  Callers **without** an `Origin` header — Obsidian's desktop app, `curl`, local
+  scripts — work out of the box.
+
 ## Tests
 
 Three stub-based self-check suites ship in the box. They need nothing but Node's
