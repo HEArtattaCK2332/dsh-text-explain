@@ -376,6 +376,20 @@ check('对外 API：缺 messages 返回 400，错误体是 OpenAI 形状',
   badOpenAi.status === 400 && JSON.parse(badOpenAi.body).error.message !== undefined,
   `HTTP ${badOpenAi.status}`)
 
+// app:// 来源（Electron 应用，Obsidian 桌面版即 app://obsidian.md）
+const appOriginSettings = await callSettings('GET')
+const withAppOrigin = await callSettings('POST', Object.assign({}, appOriginSettings.json, { allowedOrigins: ['app://obsidian.md'] }))
+check('白名单接受 app:// 来源（Obsidian 桌面版）',
+  JSON.stringify(withAppOrigin.json.allowedOrigins) === JSON.stringify(['app://obsidian.md']),
+  JSON.stringify(withAppOrigin.json.allowedOrigins))
+const appOriginCall = await callOpenAi('/api/text-explain/v1/models', undefined, { Origin: 'app://obsidian.md' })
+check('**登记后的 app:// 来源可以调用（Obsidian 桌面版能连上）**',
+  appOriginCall.status === 200 &&
+  appOriginCall.headers.get('access-control-allow-origin') === 'app://obsidian.md',
+  `HTTP ${appOriginCall.status} / ${appOriginCall.headers.get('access-control-allow-origin')}`)
+// 收尾：把白名单清回默认，免得影响后续断言
+await callSettings('POST', Object.assign({}, appOriginSettings.json, { allowedOrigins: [] }))
+
 const openAiNoOrigin = await callOpenAi('/api/text-explain/v1/models')
 check('对外 API：**无 Origin 的客户端（Obsidian 桌面版 / curl）可直接用**',
   openAiNoOrigin.status === 200, `HTTP ${openAiNoOrigin.status}`)

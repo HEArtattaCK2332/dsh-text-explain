@@ -104,9 +104,10 @@ Model    : text-explain-plain | text-explain-general | text-explain-pro
   (for people who don't speak AI), `text-explain-pro` the most technical.
 - A `system` message from the caller is **ignored on purpose** — the whole point
   of this plugin is that the explanation style is not up to the caller.
-- Cross-origin callers must be listed in `allowedOrigins` (see Design notes).
-  Callers **without** an `Origin` header — Obsidian's desktop app, `curl`, local
-  scripts — work out of the box.
+- Callers **without** an `Origin` header (`curl`, local scripts) work out of the
+  box. Callers **with** one must be listed in `allowedOrigins` (see Design notes) —
+  desktop apps included: **Obsidian sends `Origin: app://obsidian.md`**, so that
+  exact line belongs in the allowlist.
 
 ## Tests
 

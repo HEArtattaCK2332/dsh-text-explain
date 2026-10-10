@@ -84,8 +84,9 @@ API Key：随便填一个（或留空）
 - `POST /chat/completions` 收标准格式，支持 `stream: true`（SSE 流式）。
 - **模型名就是档位**：`text-explain-plain` 是默认口吻（讲给不懂 AI 的人），`-pro` 最专业。
 - 调用方传的 `system` **会被刻意忽略**——本插件的立身之本就是「讲法不由调用方决定」。
-- 跨来源调用需登记进 `allowedOrigins`（见设计说明）；而**不带 `Origin` 头**的调用方
-  （Obsidian 桌面版、`curl`、本机脚本）**开箱即用**。
+- **不带 `Origin` 头**的调用方（`curl`、本机脚本）**开箱即用**；带 `Origin` 的必须登记进
+  `allowedOrigins`（见设计说明）——**桌面应用也算**：Obsidian 发的是
+  `Origin: app://obsidian.md`，把这一行加进白名单即可。
 
 ## 自检
 
