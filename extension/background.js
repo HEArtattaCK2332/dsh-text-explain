@@ -81,12 +81,17 @@ function runExplain(job) {
       }
     }
 
+    // 多轮：内容脚本会把完整对话历史发过来；旧调用只给一段 text 也照样能用。
+    var outgoing = Array.isArray(job.messages) && job.messages.length > 0
+      ? job.messages
+      : [{ role: 'user', content: String(job.text || '') }]
+
     return fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'text-explain-' + level,
-        messages: [{ role: 'user', content: job.text }],
+        messages: outgoing,
         stream: true
       })
     })
@@ -161,6 +166,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   runExplain({
     tabId: tabId,
     requestId: message.requestId,
+    messages: message.messages,
     text: message.text,
     level: message.level
   })

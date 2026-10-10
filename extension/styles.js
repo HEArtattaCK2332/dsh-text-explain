@@ -18,6 +18,7 @@ var TextExplainStyles = `
     --te-border: #e5e7eb;
     --te-accent: #2563eb;
     --te-code-bg: #f6f8fa;
+    --te-ask-bg: #f3f4f6;
     --te-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
       "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
@@ -33,6 +34,7 @@ var TextExplainStyles = `
       --te-border: #3a3f44;
       --te-accent: #6ea8fe;
       --te-code-bg: #2a2e33;
+      --te-ask-bg: #2a2e33;
       --te-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     }
   }
@@ -62,9 +64,9 @@ var TextExplainStyles = `
   .dsh-te-panel {
     position: absolute;
     z-index: 2147483647;
-    width: 420px;
+    width: 440px;
     max-width: calc(100vw - 32px);
-    max-height: 60vh;
+    max-height: 70vh;
     display: flex;
     flex-direction: column;
     border: 1px solid var(--te-border);
@@ -101,18 +103,25 @@ var TextExplainStyles = `
     background: var(--te-accent);
     color: #fff;
   }
-  .dsh-te-close {
-    border: none;
+  .dsh-te-icon {
+    border: 1px solid transparent;
     background: transparent;
     color: var(--te-muted);
-    font-size: 16px;
+    font-size: 13px;
     line-height: 1;
     cursor: pointer;
-    padding: 2px 6px;
+    padding: 3px 6px;
+    border-radius: 6px;
   }
-  .dsh-te-close:hover {
+  .dsh-te-icon:hover {
     color: var(--te-fg);
+    border-color: var(--te-border);
   }
+  .dsh-te-icon[data-on="1"] {
+    color: var(--te-accent);
+    border-color: var(--te-accent);
+  }
+
   .dsh-te-body {
     padding: 10px 12px;
     overflow: auto;
@@ -149,8 +158,64 @@ var TextExplainStyles = `
     color: var(--te-muted);
   }
   .dsh-te-body a { color: var(--te-accent); }
+
+  /* 追问：每一轮提问单独成行，与回答区分开 */
+  .dsh-te-ask {
+    margin: 12px 0 6px;
+    padding: 5px 9px;
+    border-radius: 8px;
+    background: var(--te-ask-bg);
+    color: var(--te-muted);
+    font-size: 12.5px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .dsh-te-ask:first-child { margin-top: 0; }
+  .dsh-te-ctx {
+    margin: 0 0 8px;
+    color: var(--te-muted);
+    font-size: 12px;
+  }
+
+  .dsh-te-input {
+    display: flex;
+    gap: 6px;
+    padding: 8px 10px;
+    border-top: 1px solid var(--te-border);
+    background: var(--te-bg);
+    flex: 0 0 auto;
+  }
+  .dsh-te-input input {
+    flex: 1 1 auto;
+    padding: 6px 9px;
+    border: 1px solid var(--te-border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--te-fg);
+    font: inherit;
+    font-size: 13px;
+  }
+  .dsh-te-input input:focus {
+    outline: none;
+    border-color: var(--te-accent);
+  }
+  .dsh-te-send {
+    padding: 6px 12px;
+    border: 1px solid var(--te-accent);
+    border-radius: 8px;
+    background: var(--te-accent);
+    color: #fff;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .dsh-te-send[disabled] {
+    opacity: 0.5;
+    cursor: default;
+  }
+
   .dsh-te-status {
-    padding: 0 12px 10px;
+    padding: 0 12px 8px;
     color: var(--te-muted);
     font-size: 12px;
     flex: 0 0 auto;

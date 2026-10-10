@@ -115,6 +115,33 @@ check('options.html：有触发方式选择，且默认项是右键菜单',
 check('options.js：保存触发方式',
   fs.readFileSync(path.join(extDir, 'options.js'), 'utf8').includes('triggerMode'))
 
+// 5) 追问、网页上下文、钉住、多轮透传
+check('content.js：收集网页上下文（段落 / 标题 / 页面）',
+  contentSource.includes('collectPageContext') &&
+  contentSource.includes('findSurroundingParagraph') &&
+  contentSource.includes('findNearestHeading'))
+check('content.js：第一条消息把上下文与选中片段拼在一起',
+  contentSource.includes('composeFirstMessage') && contentSource.includes('这一段的原文'))
+check('content.js：交代了上下文的作用与边界（不传整页，只取所在段落）',
+  contentSource.includes('MAX_PARAGRAPH_CHARS'))
+check('content.js：追问维护完整对话历史',
+  contentSource.includes('buildMessages') && contentSource.includes('conversation.push'))
+check('content.js：提问单独成行渲染（与回答区分）',
+  contentSource.includes('dsh-te-ask') && contentSource.includes('renderConversation'))
+check('content.js：请求带的是 messages 数组（多轮）',
+  contentSource.includes('messages: buildMessages()'))
+check('content.js：有钉住开关（钉住后不随点击页面关闭）',
+  contentSource.includes('pinned') && contentSource.includes('keepPinned'))
+check('content.js：换档位等于用新讲法重讲第一个问题',
+  contentSource.includes("conversation = [{ role: 'user', content: first }]"))
+check('background.js：透传多轮 messages',
+  bgSource.includes('job.messages') && bgSource.includes('var outgoing'))
+check('background.js：仍兼容只给一段 text 的旧调用',
+  bgSource.includes("job.text || ''"))
+check('styles.js：有追问输入区与提问行的样式',
+  fs.readFileSync(path.join(extDir, 'styles.js'), 'utf8').includes('dsh-te-input') &&
+  fs.readFileSync(path.join(extDir, 'styles.js'), 'utf8').includes('dsh-te-ask'))
+
 const failed = results.filter((item) => !item.ok)
 console.log(`\n合计 ${results.length} 项，失败 ${failed.length} 项`)
 process.exit(failed.length === 0 ? 0 : 1)

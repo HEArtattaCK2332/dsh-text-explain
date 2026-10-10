@@ -1,13 +1,20 @@
 /**
- * 内容脚本：划词/右键 → 浮窗 → 流式解释。
+ * 内容脚本：划词/右键 → 浮窗 → 流式解释 → 就地追问。
  *
  * 界面整个放在一个 **Shadow DOM** 里：既不让页面的 CSS 污染浮窗，
  * 也不必把我们的样式洒进别人的页面。
  *
- * 触发方式由设置决定（默认「右键菜单」）：
- *   - context-menu     只认右键菜单里的那一项（默认，日常浏览最不打扰）
- *   - selection-button 只认划词后浮出的小按钮
- *   - both             两者都要
+ * 三件事值得说明：
+ *
+ * ① **网页上下文**。选中一句「它指的是这个」，脱开页面谁也不知道「它」是什么。
+ *    所以打开浮窗时会顺手收集：所在段落的原文、最近的上级标题、页面标题与网址，
+ *    拼在第一条消息里一起发给模型。解释与后续交接共用这一份。
+ *
+ * ② **追问**。浮窗里维护一条对话流（用户/助手交替），每次追问都把完整历史发出去，
+ *    所以模型记得前面聊过什么。
+ *
+ * ③ **钉住**。默认点页面别处就关（免得挡视线）；点一下图钉后，只有 Esc 或关闭
+ *    按钮能关它——解决「不小心点到外面就没了」。
  *
  * 请求本身不在这里发 —— 交给后台的 service worker（原因见 background.js 顶部）。
  */
@@ -18,21 +25,31 @@
   var LEVELS = ['plain', 'general', 'pro']
   var LEVEL_LABELS = { plain: '小白', general: '通识', pro: '专业' }
   var LEVEL_ALIASES = { expert: 'pro' } // 四档时代的旧值，平滑迁移
+  var BLOCK_TAGS = {
+    P: 1, LI: 1, TD: 1, TH: 1, DD: 1, DT: 1, BLOCKQUOTE: 1, FIGCAPTION: 1, PRE: 1,
+    ARTICLE: 1, SECTION: 1, MAIN: 1
+  }
+  var MAX_PARAGRAPH_CHARS = 1200
+  var MAX_HEADING_CHARS = 120
 
   var host = null
   var shadow = null
   var triggerEl = null
   var panelEl = null
   var bodyEl = null
+  var inputEl = null
+  var sendEl = null
   var statusEl = null
   var errorEl = null
+  var pinEl = null
   var levelButtons = {}
 
   var currentLevel = 'plain'
   var triggerMode = 'context-menu'
+  var pinned = false
+  var conversation = [] // [{ role: 'user' | 'assistant', content }]
+  var pageContext = null
   var activeRequestId = null
-  var renderedSoFar = ''
-  var pendingText = ''
 
   function normalizeLevel(value) {
     var resolved = LEVEL_ALIASES[value] || value
@@ -67,7 +84,6 @@
     return shadow.__ui
   }
 
-  /** 页面坐标（把视口坐标加上滚动量，浮窗才不会跟着滚跑）。 */
   function pageRect(rect) {
     return {
       left: rect.left + window.scrollX,
@@ -89,6 +105,74 @@
     var selection = window.getSelection()
     if (!selection) return ''
     return String(selection.toString() || '').trim()
+  }
+
+  // ---- 网页上下文 ----
+
+  /** 把选中的那段话「放回它所在的段落」——这是最值钱的上下文。 */
+  function findSurroundingParagraph(range) {
+    var node = range.startContainer
+    var element = node.nodeType === 1 ? node : node.parentElement
+    while (element && element !== document.body) {
+      if (BLOCK_TAGS[element.tagName] === 1) {
+        var own = String(element.innerText || element.textContent || '').trim()
+        if (own.length > 0) return own
+      }
+      element = element.parentElement
+    }
+    var body = document.body
+    return body ? String(body.innerText || '').trim() : ''
+  }
+
+  /** 往上找最近的一个上级标题（h1–h6），用来说明「这一节在讲什么」。 */
+  function findNearestHeading(range) {
+    var cursor = range.startContainer
+    cursor = cursor.nodeType === 1 ? cursor : cursor.parentElement
+    while (cursor && cursor !== document.body) {
+      var previous = cursor.previousElementSibling
+      while (previous) {
+        if (/^H[1-6]$/.test(previous.tagName)) return String(previous.textContent || '').trim()
+        if (previous.querySelector) {
+          var inner = previous.querySelector('h1,h2,h3,h4,h5,h6')
+          if (inner) return String(inner.textContent || '').trim()
+        }
+        previous = previous.previousElementSibling
+      }
+      cursor = cursor.parentElement
+    }
+    return ''
+  }
+
+  function collectPageContext() {
+    var context = {
+      title: String(document.title || '').trim(),
+      url: String(location.href || ''),
+      heading: '',
+      paragraph: ''
+    }
+    try {
+      var selection = window.getSelection()
+      if (!selection || selection.rangeCount === 0) return context
+      var range = selection.getRangeAt(0)
+      context.paragraph = findSurroundingParagraph(range).slice(0, MAX_PARAGRAPH_CHARS)
+      context.heading = findNearestHeading(range).slice(0, MAX_HEADING_CHARS)
+    } catch (_error) {
+      /* 拿不到就算了，不影响解释本身 */
+    }
+    return context
+  }
+
+  /** 第一条消息 = 上下文 + 我要问的片段。 */
+  function composeFirstMessage(text, context) {
+    var parts = []
+    if (context.title || context.url) {
+      parts.push('【所在页面】' + (context.title || '（无标题）') + (context.url ? '\n' + context.url : ''))
+    }
+    if (context.heading) parts.push('【所在小节】' + context.heading)
+    if (context.paragraph) parts.push('【这一段的原文】\n' + context.paragraph)
+    parts.push('【我要问的片段】\n' + text)
+    parts.push('请结合这一段的意思，把【我要问的片段】用大白话讲清楚。')
+    return parts.join('\n\n')
   }
 
   // ---- 小按钮（「划词即出」模式下才用） ----
@@ -115,7 +199,6 @@
       hideTrigger()
       return
     }
-    pendingText = text
     ensureHost()
 
     if (triggerEl === null) {
@@ -130,7 +213,7 @@
       triggerEl.addEventListener('click', function (event) {
         event.preventDefault()
         event.stopPropagation()
-        openPanel(pendingText)
+        openPanel(text)
       })
       uiRoot().appendChild(triggerEl)
     }
@@ -147,19 +230,22 @@
       panelEl.remove()
       panelEl = null
       bodyEl = null
+      inputEl = null
+      sendEl = null
       statusEl = null
       errorEl = null
+      pinEl = null
       levelButtons = {}
     }
     activeRequestId = null
-    renderedSoFar = ''
+    conversation = []
+    pageContext = null
   }
 
   function setStatus(text) {
-    if (statusEl !== null) {
-      statusEl.textContent = text
-      statusEl.style.display = text ? 'block' : 'none'
-    }
+    if (statusEl === null) return
+    statusEl.textContent = text
+    statusEl.style.display = text ? 'block' : 'none'
   }
 
   function setError(text) {
@@ -168,9 +254,29 @@
     errorEl.style.display = text ? 'block' : 'none'
   }
 
-  function paintMarkdown() {
+  function setBusy(busy) {
+    if (sendEl !== null) sendEl.disabled = busy
+    if (inputEl !== null) inputEl.disabled = busy
+  }
+
+  /** 把整条对话流画出来：提问单独成行，回答走 markdown。 */
+  function renderConversation() {
     if (bodyEl === null) return
-    bodyEl.innerHTML = TextExplainMarkdown(renderedSoFar)
+    var html = []
+    if (pageContext && (pageContext.heading || pageContext.title)) {
+      var where = pageContext.heading || pageContext.title
+      html.push('<div class="dsh-te-ctx">语境取自：' + TextExplainMarkdown(where) + '</div>')
+    }
+    for (var i = 0; i < conversation.length; i += 1) {
+      var message = conversation[i]
+      if (message.role === 'user') {
+        html.push('<div class="dsh-te-ask">' + TextExplainMarkdown(message.content) + '</div>')
+      } else if (message.content.length > 0) {
+        html.push('<div class="dsh-te-answer">' + TextExplainMarkdown(message.content) + '</div>')
+      }
+    }
+    bodyEl.innerHTML = html.join('')
+    bodyEl.scrollTop = bodyEl.scrollHeight
   }
 
   function syncLevelButtons() {
@@ -180,13 +286,22 @@
     })
   }
 
-  function openPanel(text) {
+  function syncPin() {
+    if (pinEl !== null) pinEl.setAttribute('data-on', pinned ? '1' : '0')
+  }
+
+  function openPanel(text, options) {
     var content = String(text || '').trim()
     if (content.length === 0) return
+    var keepPinned = options && options.keepPinned === true
+    var wasPinned = pinned
     closePanel()
+    pinned = keepPinned ? wasPinned : false
     ensureHost()
     hideTrigger()
-    renderedSoFar = ''
+
+    pageContext = collectPageContext()
+    conversation = [{ role: 'user', content: content }]
 
     panelEl = document.createElement('div')
     panelEl.className = 'dsh-te-panel'
@@ -194,6 +309,7 @@
       event.stopPropagation()
     })
 
+    // 顶栏：档位 + 图钉 + 关闭
     var head = document.createElement('div')
     head.className = 'dsh-te-head'
 
@@ -211,12 +327,31 @@
         currentLevel = id
         syncLevelButtons()
         chrome.storage.local.set({ level: id })
-        startExplain(content)
+        // 换档位 = 用新讲法重讲第一个问题（历史清空重来）
+        if (conversation.length > 0) {
+          var first = conversation[0].content
+          conversation = [{ role: 'user', content: first }]
+          ask(first)
+        }
       })
       levelButtons[id] = button
       levels.appendChild(button)
     })
     head.appendChild(levels)
+
+    pinEl = document.createElement('button')
+    pinEl.className = 'dsh-te-icon'
+    pinEl.type = 'button'
+    pinEl.textContent = '📌'
+    pinEl.title = '钉住：不再随点击页面而关闭'
+    pinEl.addEventListener('click', function (event) {
+      event.preventDefault()
+      event.stopPropagation()
+      pinned = !pinned
+      syncPin()
+      if (pinEl !== null) pinEl.title = pinned ? '已钉住：只有 Esc 或 × 能关' : '钉住：不再随点击页面而关闭'
+    })
+    head.appendChild(pinEl)
 
     var close = document.createElement('button')
     close.className = 'dsh-te-close'
@@ -235,6 +370,31 @@
     bodyEl.className = 'dsh-te-body'
     panelEl.appendChild(bodyEl)
 
+    var inputRow = document.createElement('div')
+    inputRow.className = 'dsh-te-input'
+    inputEl = document.createElement('input')
+    inputEl.type = 'text'
+    inputEl.placeholder = '追问一句…（回车发送）'
+    inputEl.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') {
+        event.preventDefault()
+        event.stopPropagation()
+        submitFollowUp()
+      }
+    })
+    inputRow.appendChild(inputEl)
+    sendEl = document.createElement('button')
+    sendEl.className = 'dsh-te-send'
+    sendEl.type = 'button'
+    sendEl.textContent = '追问'
+    sendEl.addEventListener('click', function (event) {
+      event.preventDefault()
+      event.stopPropagation()
+      submitFollowUp()
+    })
+    inputRow.appendChild(sendEl)
+    panelEl.appendChild(inputRow)
+
     statusEl = document.createElement('div')
     statusEl.className = 'dsh-te-status'
     panelEl.appendChild(statusEl)
@@ -246,43 +406,76 @@
 
     uiRoot().appendChild(panelEl)
     syncLevelButtons()
+    syncPin()
+    renderConversation()
 
     var rect = currentSelectionRect()
-    var box = rect === null ? { left: 40 + window.scrollX, top: 80 + window.scrollY, width: 0, height: 0 } : pageRect(rect)
-    var width = 420
+    var box = rect === null
+      ? { left: 40 + window.scrollX, top: 80 + window.scrollY, width: 0, height: 0 }
+      : pageRect(rect)
+    var width = 440
     var left = Math.min(Math.max(8, box.left), Math.max(8, window.scrollX + window.innerWidth - width - 16))
     panelEl.style.left = Math.round(left) + 'px'
     panelEl.style.top = Math.round(box.top + box.height + 10) + 'px'
 
-    startExplain(content)
+    // 第一条消息带上网页上下文
+    conversation[0].content = composeFirstMessage(content, pageContext)
+    renderConversation()
+    ask()
+    if (inputEl !== null) inputEl.focus()
   }
 
-  function startExplain(text) {
+  /** 把当前对话历史整理成要发给后端的 messages。 */
+  function buildMessages() {
+    var outgoing = []
+    for (var i = 0; i < conversation.length; i += 1) {
+      var message = conversation[i]
+      if (message.role === 'assistant' && message.content.length === 0) continue // 空占位不发
+      outgoing.push({ role: message.role, content: message.content })
+    }
+    return outgoing
+  }
+
+  /** 真正发起一次请求（历史里最后一条助手消息此时是空占位）。 */
+  function ask() {
     if (panelEl === null) return
-    renderedSoFar = ''
-    paintMarkdown()
+    conversation.push({ role: 'assistant', content: '' })
+    renderConversation()
     setError('')
     setStatus('正在解释…')
+    setBusy(true)
     activeRequestId = 'req-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8)
     chrome.runtime.sendMessage(
       {
         type: 'text-explain/start',
         requestId: activeRequestId,
-        text: text,
+        messages: buildMessages(),
         level: currentLevel
       },
       function (response) {
         if (chrome.runtime.lastError) {
           setError('扩展后台没有响应：' + chrome.runtime.lastError.message)
           setStatus('')
+          setBusy(false)
           return
         }
         if (!response || response.ok !== true) {
           setError((response && response.message) || '无法开始请求')
           setStatus('')
+          setBusy(false)
         }
       }
     )
+  }
+
+  function submitFollowUp() {
+    if (inputEl === null || sendEl === null || sendEl.disabled) return
+    var question = String(inputEl.value || '').trim()
+    if (question.length === 0) return
+    inputEl.value = ''
+    conversation.push({ role: 'user', content: question })
+    renderConversation()
+    ask()
   }
 
   // ---- 后台推回来的流 ----
@@ -290,26 +483,30 @@
   chrome.runtime.onMessage.addListener(function (message) {
     // 右键菜单来的指令：用菜单里带的文字开浮窗
     if (message && message.type === 'text-explain/open') {
-      // 右键时选区还在，优先用页面上的选区（更准）；没有就用菜单传回来的
       var text = currentSelectionText() || String(message.text || '')
       openPanel(text)
       return
     }
     if (!message || message.requestId !== activeRequestId) return
     if (message.type === 'text-explain/chunk') {
-      renderedSoFar += message.text
-      paintMarkdown()
-      if (bodyEl !== null) bodyEl.scrollTop = bodyEl.scrollHeight
+      var last = conversation[conversation.length - 1]
+      if (last && last.role === 'assistant') {
+        last.content += message.text
+        renderConversation()
+      }
       return
     }
     if (message.type === 'text-explain/done') {
       setStatus('')
+      setBusy(false)
       activeRequestId = null
+      if (inputEl !== null) inputEl.focus()
       return
     }
     if (message.type === 'text-explain/error') {
       setError(message.message || '出错了')
       setStatus('')
+      setBusy(false)
       activeRequestId = null
     }
   })
@@ -326,7 +523,7 @@
   document.addEventListener('mousedown', function (event) {
     if (host !== null && event.composedPath && event.composedPath().indexOf(host) >= 0) return
     hideTrigger()
-    closePanel()
+    if (!pinned) closePanel() // 钉住后，点页面别处不再关它
   })
 
   document.addEventListener('keydown', function (event) {
@@ -338,7 +535,6 @@
 
   window.addEventListener('scroll', hideTrigger, true)
 
-  // 记住上次用的档位与触发方式
   chrome.storage.local.get({ level: 'plain', triggerMode: 'context-menu' }, function (stored) {
     currentLevel = normalizeLevel(stored.level)
     triggerMode =
@@ -348,12 +544,17 @@
   })
 
   chrome.storage.onChanged.addListener(function (changes, area) {
-    if (area === 'local' && changes.triggerMode) {
+    if (area !== 'local') return
+    if (changes.triggerMode) {
       triggerMode =
         changes.triggerMode.newValue === 'selection-button' || changes.triggerMode.newValue === 'both'
           ? changes.triggerMode.newValue
           : 'context-menu'
       if (!wantsSelectionButton()) hideTrigger()
+    }
+    if (changes.level) {
+      currentLevel = normalizeLevel(changes.level.newValue)
+      syncLevelButtons()
     }
   })
 })()
