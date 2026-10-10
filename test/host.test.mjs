@@ -526,6 +526,53 @@ await postExplain({ text: '强制查本地', forceTool: 'file' })
 check('强制触发（本地）：这一段点名「本地搜索」',
   captured[beforeForceFile].system.includes('他点了「本地搜索」'))
 
+// 11) 对外 API 的工具：只给联网，**永不给本机文件**
+const beforeOpenAiTools = captured.length
+await callOpenAi('/api/text-explain/v1/chat/completions', {
+  model: 'text-explain-plain',
+  messages: [{ role: 'user', content: '联网查一下这个项目' }]
+})
+const openAiTools = captured[beforeOpenAiTools].tools || []
+const openAiToolNames = openAiTools.map((tool) => String(tool.name)).join(',')
+check('对外 API：默认就把联网工具交给模型（模型自主判断用不用）',
+  openAiTools.some((tool) => String(tool.name).indexOf('web') >= 0), openAiToolNames)
+check('对外 API：**永远不给本机文件工具（安全边界）**',
+  !openAiTools.some((tool) => /file/i.test(String(tool.name))), openAiToolNames)
+check('对外 API：系统提示里说明了「没有读本机文件的能力」',
+  captured[beforeOpenAiTools].system.includes('没有**读取本机文件的能力' .replace('**', '**')) ||
+  captured[beforeOpenAiTools].system.includes('读取本机文件的能力'))
+
+const beforeOpenAiForce = captured.length
+await callOpenAi('/api/text-explain/v1/chat/completions', {
+  model: 'text-explain-plain',
+  messages: [{ role: 'user', content: '强制联网' }],
+  forceTool: 'web'
+})
+check('对外 API：forceTool=web 时，系统提示里加了「补充检索」那一段',
+  captured[beforeOpenAiForce].system.includes('【本轮是用户主动要求的补充检索】'))
+check('对外 API：forceTool=web 时，联网工具仍然在（而且没有文件工具）',
+  (captured[beforeOpenAiForce].tools || []).some((tool) => String(tool.name).indexOf('web') >= 0) &&
+  !(captured[beforeOpenAiForce].tools || []).some((tool) => /file/i.test(String(tool.name))))
+
+const beforeOpenAiFileForce = captured.length
+await callOpenAi('/api/text-explain/v1/chat/completions', {
+  model: 'text-explain-plain',
+  messages: [{ role: 'user', content: '强制查本地' }],
+  forceTool: 'file'
+})
+check('对外 API：**即便显式要 file，也不给文件工具、不加本地检索提示**',
+  !(captured[beforeOpenAiFileForce].tools || []).some((tool) => /file/i.test(String(tool.name))) &&
+  !captured[beforeOpenAiFileForce].system.includes('本地搜索'))
+
+const beforeOpenAiOff = captured.length
+await callOpenAi('/api/text-explain/v1/chat/completions', {
+  model: 'text-explain-plain',
+  messages: [{ role: 'user', content: '关掉联网' }],
+  enableWeb: false
+})
+check('对外 API：enableWeb=false 时不给任何工具',
+  (captured[beforeOpenAiOff].tools || []).length === 0)
+
 server.close()
 fs.rmSync(tempHome, { recursive: true, force: true })
 
