@@ -139,9 +139,10 @@ check('白名单里的脏来源被洗净（与宿主同一套规则）',
       'chrome-extension://abcdefghijklmnopabcdefghijklmnop', 'https://ok.example']
   }).allowedOrigins) === JSON.stringify(['https://ok.example', 'chrome-extension://abcdefghijklmnopabcdefghijklmnop']))
 check('未知档位不被认作合法 id', makeSettingsEnv().api.isLevelId('nope') === false)
-check('四档 id 与 label 齐备',
-  makeSettingsEnv().api.LEVEL_OPTIONS.map((o) => o.id).join(',') === 'plain,general,pro,expert' &&
-  makeSettingsEnv().api.LEVEL_OPTIONS.map((o) => o.label).join(',') === '小白,通识,专业,深研')
+check('旧档位 expert 归一化为 pro（不是回落成小白）', makeSettingsEnv().api.normalizeSettings({ explainLevel: 'expert' }).explainLevel === 'pro')
+check('三档 id 与 label 齐备',
+  makeSettingsEnv().api.LEVEL_OPTIONS.map((o) => o.id).join(',') === 'plain,general,pro' &&
+  makeSettingsEnv().api.LEVEL_OPTIONS.map((o) => o.label).join(',') === '小白,通识,专业')
 
 const diff = makeSettingsEnv().api
 check('脏检测：五字段全同 → 不脏', diff.sameSettings(full, Object.assign({}, full)) === true)
@@ -155,10 +156,10 @@ const env = makeSettingsEnv()
 check('还没读过时，缓存里就是默认值（插件立刻可用）', env.api.getSettings().explainLevel === 'plain')
 check('打开面板之前没有任何网络调用', env.calls.length === 0)
 
-env.ok(Object.assign({}, full, { explainLevel: 'expert', advancedVisible: true }))
+env.ok(Object.assign({}, full, { explainLevel: 'pro', advancedVisible: true }))
 const got = await env.api.fetchSettings()
-check('读取成功后返回该值', Boolean(got) && got.explainLevel === 'expert' && got.advancedVisible === true)
-check('读取成功后缓存同步更新', env.api.getSettings().explainLevel === 'expert' && env.api.getSettings().advancedVisible === true)
+check('读取成功后返回该值', Boolean(got) && got.explainLevel === 'pro' && got.advancedVisible === true)
+check('读取成功后缓存同步更新', env.api.getSettings().explainLevel === 'pro' && env.api.getSettings().advancedVisible === true)
 check('读取走设置端点、用 GET（不带 method 或 method=GET）',
   env.calls.length === 1 && env.calls[0].url === '/api/text-explain/settings' &&
   (env.calls[0].options === undefined || env.calls[0].options.method === undefined),
@@ -169,12 +170,12 @@ check('**只读不写**：这一轮没有任何 POST', env.posts().length === 0)
 env.fail()
 const failedRead = await env.api.fetchSettings()
 check('读取遇到非 200 → 返回 null，缓存原样不动',
-  failedRead === null && env.api.getSettings().explainLevel === 'expert')
+  failedRead === null && env.api.getSettings().explainLevel === 'pro')
 
 env.broken()
 const brokenRead = await env.api.fetchSettings()
 check('响应体不是合法 JSON → 返回 null，缓存原样不动',
-  brokenRead === null && env.api.getSettings().explainLevel === 'expert')
+  brokenRead === null && env.api.getSettings().explainLevel === 'pro')
 
 const offline = makeSettingsEnv()
 const offlineRead = await offline.api.fetchSettings()

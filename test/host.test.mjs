@@ -1,5 +1,5 @@
 // 宿主半桩测试：用假的 llm / webServer 真跑一次 /api/text-explain，
-// 检查「难度旋钮」四档是否产出不同的系统提示词，以及非法档位是否回落默认档。
+// 检查「难度旋钮」三档是否产出不同的系统提示词，以及非法档位是否回落默认档。
 // 用法: node test/host.test.mjs [lib/index.js 的路径]
 import http from 'node:http'
 import fs from 'node:fs'
@@ -90,12 +90,11 @@ function check(name, ok, detail) {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  ' + detail : ''}`)
 }
 
-// 1) 四档各来一次，看系统提示词与 maxTokens
+// 1) 三档各来一次，看系统提示词与 maxTokens
 const cases = [
   { level: 'plain', must: '完全不懂 AI', tokens: 1024 },
   { level: 'general', must: '会用电脑、有常识', tokens: 1024 },
-  { level: 'pro', must: '同行', tokens: 1280 },
-  { level: 'expert', must: '前提', tokens: 1536 }
+  { level: 'pro', must: '同行', tokens: 1400 }
 ]
 
 for (const item of cases) {
@@ -124,7 +123,7 @@ const beforeTools = captured.length
 await call({ text: '开工具', level: 'pro', enableWeb: true, enableFile: true })
 const withTools = captured[beforeTools]
 check('开启工具后附上工具说明', Boolean(withTools && withTools.system.includes('web_search')))
-check('四档各自的系统提示词互不相同', new Set(captured.slice(0, 4).map((o) => o.system)).size === 4)
+check('三档各自的系统提示词互不相同', new Set(captured.slice(0, 3).map((o) => o.system)).size === 3)
 
 // 4) 语境注入仍然工作
 const beforeCtx = captured.length
@@ -158,8 +157,8 @@ const saved = await callSettings('POST', {
   advancedVisible: true
 })
 check('POST 设置返回 200', saved.status === 200, `HTTP ${saved.status}`)
-check('保存后返回的就是落盘的那份',
-  Boolean(saved.json) && saved.json.explainLevel === 'expert' && saved.json.newSessionTarget === 'ungrouped' &&
+check('保存后返回的就是落盘的那份（四档时代的 expert 已迁移为 pro）',
+  Boolean(saved.json) && saved.json.explainLevel === 'pro' && saved.json.newSessionTarget === 'ungrouped' &&
   saved.json.webDefault === false && saved.json.advancedVisible === true,
   JSON.stringify(saved.json))
 check('保存后磁盘上出现了设置文件', fs.existsSync(settingsFile))
@@ -170,8 +169,8 @@ check('磁盘文件是「键顺序稳定 + 结尾换行」的可读 JSON',
   fs.readFileSync(settingsFile, 'utf8').endsWith('\n'))
 
 const reread = await callSettings('GET')
-check('再读一次拿到刚保存的值',
-  Boolean(reread.json) && reread.json.explainLevel === 'expert' && reread.json.advancedVisible === true,
+check('再读一次拿到刚保存的值（同为迁移后的 pro）',
+  Boolean(reread.json) && reread.json.explainLevel === 'pro' && reread.json.advancedVisible === true,
   JSON.stringify(reread.json))
 
 const dirty = await callSettings('POST', {
@@ -292,10 +291,10 @@ async function callOpenAi(path, payload, headers) {
 const modelList = await callOpenAi('/api/text-explain/v1/models')
 check('对外 API：GET /v1/models 返回 200', modelList.status === 200, `HTTP ${modelList.status}`)
 const parsedModels = JSON.parse(modelList.body)
-check('对外 API：列出四档 model（text-explain-*）',
+check('对外 API：列出三档 model（text-explain-*）',
   Array.isArray(parsedModels.data) &&
   parsedModels.data.map((item) => item.id).join(',') ===
-    'text-explain-plain,text-explain-general,text-explain-pro,text-explain-expert',
+    'text-explain-plain,text-explain-general,text-explain-pro',
   JSON.stringify(parsedModels.data && parsedModels.data.map((item) => item.id)))
 
 const completion = await callOpenAi('/api/text-explain/v1/chat/completions', {
@@ -322,6 +321,14 @@ await callOpenAi('/api/text-explain/v1/chat/completions', {
 })
 check('对外 API：model 名映射到档位（pro → 同行口吻）',
   Boolean(captured[beforePro] && captured[beforePro].system.includes('同行')))
+
+const beforeAlias = captured.length
+await callOpenAi('/api/text-explain/v1/chat/completions', {
+  model: 'text-explain-expert',
+  messages: [{ role: 'user', content: '讲讲' }]
+})
+check('对外 API：四档时代的 expert 平滑落到 pro（不报错、也不降级成小白）',
+  Boolean(captured[beforeAlias] && captured[beforeAlias].system.includes('同行')))
 
 const beforeUnknownModel = captured.length
 await callOpenAi('/api/text-explain/v1/chat/completions', {

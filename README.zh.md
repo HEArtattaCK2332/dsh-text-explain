@@ -22,7 +22,7 @@ AI 的输出里塞满了「默认你已经懂」的词。常规建议是「直�
 
 - **带语境理解**：划词时会连「这段话所在的那条完整消息」一起读走，一并交给模型。
   「最后由它打款」单看没头没尾，带上语境就知道「它」指财务部门。
-- **难度旋钮（讲给谁听）**：四档——**小白 / 通识 / 专业 / 深研**，默认「小白」。
+- **难度旋钮（讲给谁听）**：三档——**小白 / 通识 / 专业**，默认「小白」。
   换一档，它会**立刻把当前这问重讲一遍**：同一句话，前一眼是生活里的比方，后一眼是工程术语。
   弹窗里换的那一下只管本次；想「以后都这样」，到设置页选好再按保存。
 - **待命式交接（✦ 新建为对话）**：把原文、它所在的消息、以及已经问过的内容打包成一份「交接单」，
@@ -77,12 +77,12 @@ dsh plugin --profile web add file:<dsh-text-explain 的路径>
 ```
 接口地址（Base URL）：http://127.0.0.1:3080/api/text-explain/v1
 API Key：随便填一个（或留空）
-模型：text-explain-plain ｜ text-explain-general ｜ text-explain-pro ｜ text-explain-expert
+模型：text-explain-plain ｜ text-explain-general ｜ text-explain-pro
 ```
 
-- `GET /models` 列出四档。
+- `GET /models` 列出三档。
 - `POST /chat/completions` 收标准格式，支持 `stream: true`（SSE 流式）。
-- **模型名就是档位**：`text-explain-plain` 是默认口吻（讲给不懂 AI 的人），`-expert` 最深。
+- **模型名就是档位**：`text-explain-plain` 是默认口吻（讲给不懂 AI 的人），`-pro` 最专业。
 - 调用方传的 `system` **会被刻意忽略**——本插件的立身之本就是「讲法不由调用方决定」。
 - 跨来源调用需登记进 `allowedOrigins`（见设计说明）；而**不带 `Origin` 头**的调用方
   （Obsidian 桌面版、`curl`、本机脚本）**开箱即用**。
@@ -95,7 +95,7 @@ API Key：随便填一个（或留空）
 node test/run-all.mjs         # 三份一起跑；也可单跑任一份
 ```
 
-- `test/host.test.mjs` —— 用假的 `llm` / `webServer` 真跑 HTTP 端点：四档必须产出四份
+- `test/host.test.mjs` —— 用假的 `llm` / `webServer` 真跑 HTTP 端点：三档必须产出三份
   **互不相同**的系统提示词；传了不认识的 `level` 必须回落 `plain`（而非报错）；
   语境仍要注入；空选段要被拒。设置端点则验：没保存过时磁盘上不该有文件、
   脏数据会被洗净、非法负载不会改动已存的那份。测试全程写进临时 `DSH_HOME`，绝不碰真实的。
@@ -110,8 +110,8 @@ node test/run-all.mjs         # 三份一起跑；也可单跑任一份
 - 划中的文字默认送给 `deepseek-official` 的 `deepseek-v4-flash`；本插件不另存 API Key。
 - 刻意零依赖、全手写：**没有构建步骤**。
 - **宿主半**（`lib/index.js`）把 `POST /api/text-explain` 与
-  `GET/POST /api/text-explain/settings` 注册为 **exact 路由**。四档提示词共用一副骨架
-  （「语境」「格式」是公共段，只有「读者 + 怎么讲」分档），故一套代码路径服务四档。
+  `GET/POST /api/text-explain/settings` 注册为 **exact 路由**。三档提示词共用一副骨架
+  （「语境」「格式」是公共段，只有「读者 + 怎么讲」分档），故一套代码路径服务三档。
 - **语境**取自 DOM：客户端从选区锚点向上，找到「仍属于同一条消息」的最外层祖先
   （上限 4000 字）。这一步失败也不影响解释，只是没有语境。
 - **联网搜索**走 Bing 的 RSS 端点（`format=rss`）——不需 API Key，且在 DuckDuckGo 不通的网络里也能用。

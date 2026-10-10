@@ -148,8 +148,8 @@ check('顶部有「刷新」按钮', collapsedView.buttons.some((b) => buttonLab
 check('顶部有「保存」按钮', collapsedView.buttons.some((b) => buttonLabel(b) === '保存'))
 check('无改动时显示「无未保存改动」', collapsedView.text.includes('无未保存改动'))
 check('常用区含「讲给谁听」', collapsedView.text.includes('讲给谁听'))
-check('四档按钮齐备（小白/通识/专业/深研）',
-  ['小白', '通识', '专业', '深研'].every((label) => collapsedView.buttons.some((b) => buttonLabel(b).includes(label))),
+check('三档按钮齐备（小白/通识/专业）',
+  ['小白', '通识', '专业'].every((label) => collapsedView.buttons.some((b) => buttonLabel(b).includes(label))),
   collapsedView.buttons.map(buttonLabel).join(' / '))
 check('默认档「小白」处于选中态（● 前缀）',
   collapsedView.buttons.some((b) => buttonLabel(b) === '● 小白'))
@@ -157,11 +157,11 @@ check('会话落点两个选项齐备', collapsedView.buttons.some((b) => button
   collapsedView.buttons.some((b) => buttonLabel(b).includes('未分组')))
 check('高级设置折叠时不渲染高级项', collapsedView.buttons.some((b) => buttonLabel(b).includes('高级设置')) &&
   !collapsedView.text.includes('工具开关的默认值'))
-check('收起态按钮数 = 9（刷新/保存 + 4 档 + 2 落点 + 高级折叠）',
-  collapsedView.buttons.length === 9, collapsedView.buttons.map(buttonLabel).join(' / '))
+check('收起态按钮数 = 8（刷新/保存 + 3 档 + 2 落点 + 高级折叠）',
+  collapsedView.buttons.length === 8, collapsedView.buttons.map(buttonLabel).join(' / '))
 
 // ---- C. 设置面板：有未保存改动 + 高级展开 ----
-const dirtyDraft = Object.assign({}, baseSettings, { explainLevel: 'expert', advancedVisible: true, webDefault: false })
+const dirtyDraft = Object.assign({}, baseSettings, { explainLevel: 'pro', advancedVisible: true, webDefault: false })
 const expanded = renderSettings({ 0: baseSettings, 1: dirtyDraft, 3: 'ready' })
 check('高级展开 + 有改动时渲染不抛错', expanded.tree !== null && expanded.error === null,
   expanded.error ? String(expanded.error) : '')
@@ -171,9 +171,9 @@ check('有改动时提示「有未保存的改动」', expandedView.text.include
 check('高级区出现「工具开关的默认值」', expandedView.text.includes('工具开关的默认值'))
 check('高级区两项默认开关齐备', expandedView.buttons.some((b) => buttonLabel(b).includes('默认开启联网')) &&
   expandedView.buttons.some((b) => buttonLabel(b).includes('默认开启读文件')))
-check('展开态按钮数 = 11', expandedView.buttons.length === 11, expandedView.buttons.map(buttonLabel).join(' / '))
-check('草稿里的档位（深研）处于选中态',
-  expandedView.buttons.some((b) => buttonLabel(b) === '● 深研'))
+check('展开态按钮数 = 10', expandedView.buttons.length === 10, expandedView.buttons.map(buttonLabel).join(' / '))
+check('草稿里的档位（专业）处于选中态',
+  expandedView.buttons.some((b) => buttonLabel(b) === '● 专业'))
 check('草稿里关掉的「默认开启联网」显示为未选中',
   expandedView.buttons.some((b) => buttonLabel(b) === '○ 默认开启联网'))
 
@@ -249,7 +249,7 @@ try {
 check('弹窗完整渲染不抛错（含 Markdown 渲染）', answeredTree !== null)
 const answeredView = collect(answeredTree)
 check('弹窗底部出现「讲给谁听」档位行', answeredView.text.includes('讲给谁听'))
-check('档位行含四个档位按钮', ['小白', '通识', '专业', '深研'].every((label) =>
+check('档位行含三个档位按钮', ['小白', '通识', '专业'].every((label) =>
   answeredView.buttons.some((b) => buttonLabel(b).includes(label))))
 check('当前档位 pro 处于选中态（蓝边高亮）',
   answeredView.buttons.some((b) => buttonLabel(b) === '专业' && isActiveStyle(b)),

@@ -25,7 +25,7 @@ plain-words version.** No prompt engineering, no second tab, no API key.
   passage came from and hands both to the model. "It will transfer the funds at
   the end" is ambiguous — until the model can see that "it" means the finance
   department.
-- **Depth knob (讲给谁听).** Four depths — **Plain / General / Pro / Expert**,
+- **Depth knob (讲给谁听).** Three depths — **Plain / General / Pro**,
   defaulting to Plain. Switch one and it **re-explains the current question on
   the spot**: the same sentence goes from kitchen-table analogy to engineering
   vocabulary. A switch in the popup lasts that popup only; set a default in
@@ -95,13 +95,13 @@ plugins, browser extensions, your own scripts.
 ```
 Base URL : http://127.0.0.1:3080/api/text-explain/v1
 API key  : anything (or leave it empty)
-Model    : text-explain-plain | text-explain-general | text-explain-pro | text-explain-expert
+Model    : text-explain-plain | text-explain-general | text-explain-pro
 ```
 
-- `GET /models` lists the four depths.
+- `GET /models` lists the three depths.
 - `POST /chat/completions` takes the standard shape and supports `stream: true` (SSE).
 - **The model name picks the depth**: `text-explain-plain` is the default voice
-  (for people who don't speak AI), `text-explain-expert` the deepest.
+  (for people who don't speak AI), `text-explain-pro` the most technical.
 - A `system` message from the caller is **ignored on purpose** — the whole point
   of this plugin is that the explanation style is not up to the caller.
 - Cross-origin callers must be listed in `allowedOrigins` (see Design notes).
@@ -118,7 +118,7 @@ node test/run-all.mjs         # all three; or run any single file
 ```
 
 - `test/host.test.mjs` — drives the real HTTP endpoints against a fake
-  `llm` / `webServer`: the four depths must produce four **different** system
+  `llm` / `webServer`: the three depths must produce three **different** system
   prompts; an unknown `level` must fall back to `plain` (never an error);
   context must still be injected; an empty selection must be rejected. It also
   checks the settings endpoint creates no file until you save, sanitizes dirty
