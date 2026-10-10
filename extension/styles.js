@@ -214,6 +214,34 @@ var TextExplainStyles = `
     cursor: default;
   }
 
+  /* 交接那一行：单独占一行，不跟输入框挤在一起 */
+  .dsh-te-actions {
+    display: flex;
+    gap: 6px;
+    padding: 0 10px 10px;
+    background: var(--te-bg);
+    flex: 0 0 auto;
+  }
+  .dsh-te-handoff {
+    flex: 1 1 auto;
+    padding: 6px 10px;
+    border: 1px solid var(--te-border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--te-fg);
+    font: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+  }
+  .dsh-te-handoff:hover {
+    border-color: var(--te-accent);
+    color: var(--te-accent);
+  }
+  .dsh-te-handoff[disabled] {
+    opacity: 0.6;
+    cursor: default;
+  }
+
   .dsh-te-status {
     padding: 0 12px 8px;
     color: var(--te-muted);

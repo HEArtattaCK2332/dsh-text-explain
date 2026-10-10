@@ -29,7 +29,7 @@ const llm = {
   }
 }
 
-// 按路径分发：插件现在注册了两条（解释端点 + 设置端点）
+// 按路径分发：插件现在注册了多条路由（解释、设置、对外 API、交接）
 const routes = new Map()
 const webServer = {
   register: (route) => {
@@ -37,7 +37,40 @@ const webServer = {
     return () => {}
   }
 }
-const ctx = { llm, webServer, effect: (fn) => fn() }
+
+// 交接端点的桩：记录「建了哪个会话」「往里面注入了什么」，供断言使用。
+// 同时挂一个 followup，用来证明插件走的是**静默** inject、没唤醒模型。
+const sessionsCreated = []
+const injected = []
+const followedUp = []
+const sessionController = {
+  create: async (options) => {
+    const sessionId = 'session-' + (sessionsCreated.length + 1)
+    sessionsCreated.push({ sessionId, options })
+    return { sessionId }
+  }
+}
+const agents = {
+  get: (sessionId) => ({
+    inject: async (message) => {
+      injected.push({ sessionId, message })
+    },
+    followup: async (message) => {
+      followedUp.push({ sessionId, message })
+    }
+  })
+}
+
+const ctx = {
+  llm,
+  webServer,
+  effect: (fn) => fn(),
+  agents,
+  // 运行时注入：桩里直接回调，把假的 sessionController 交出去
+  inject: (names, callback) => {
+    callback(sessionController)
+  }
+}
 
 mod.apply(ctx)
 if (routes.size < 2) {
@@ -405,6 +438,48 @@ const openAiPreflight = await fetch(`http://127.0.0.1:${port}/api/text-explain/v
 check('对外 API：非白名单预检回 204，但不给放行头',
   openAiPreflight.status === 204 && openAiPreflight.headers.get('access-control-allow-origin') === null,
   `${openAiPreflight.status} / ${openAiPreflight.headers.get('access-control-allow-origin')}`)
+
+// 9) 交接端点：在 DSH 里开一个新会话，把背景静默放进去
+const handoffUrl = `http://127.0.0.1:${port}/api/text-explain/new-session`
+const handoff = await fetch(handoffUrl, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ text: '【背景】测试用的一段资料' })
+})
+const handoffJson = await handoff.json()
+check('交接：POST 返回 200 与 sessionId',
+  handoff.status === 200 && typeof handoffJson.sessionId === 'string', JSON.stringify(handoffJson))
+check('交接：确实创建了一个会话', sessionsCreated.length === 1, JSON.stringify(sessionsCreated))
+check('交接：背景被注入，且注给刚建的那个会话',
+  injected.length === 1 &&
+  injected[0].sessionId === handoffJson.sessionId &&
+  injected[0].message.content[0].text === '【背景】测试用的一段资料',
+  JSON.stringify(injected[0] && injected[0].message))
+check('交接：注入的消息是 user 角色、来源标记为 user',
+  injected[0].message.role === 'user' && injected[0].message.source.kind === 'user')
+check('交接：**走的是静默 inject，没有 followup**（不唤醒模型、不烧 token）',
+  followedUp.length === 0, `followup 调用次数 ${followedUp.length}`)
+
+const handoffEmpty = await fetch(handoffUrl, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ text: '   ' })
+})
+check('交接：空 text 返回 400', handoffEmpty.status === 400, `HTTP ${handoffEmpty.status}`)
+
+const handoffWrongMethod = await fetch(handoffUrl, { method: 'GET' })
+check('交接：GET 返回 405', handoffWrongMethod.status === 405, `HTTP ${handoffWrongMethod.status}`)
+
+const handoffPreflight = await fetch(handoffUrl, { method: 'OPTIONS' })
+check('交接：预检返回 204', handoffPreflight.status === 204, `HTTP ${handoffPreflight.status}`)
+
+const handoffStranger = await fetch(handoffUrl, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', Origin: 'https://evil.example' },
+  body: JSON.stringify({ text: 'x' })
+})
+check('交接：陌生来源一律 403（不让别人的网页指挥 DSH 开会话）',
+  handoffStranger.status === 403, `HTTP ${handoffStranger.status}`)
 
 server.close()
 fs.rmSync(tempHome, { recursive: true, force: true })

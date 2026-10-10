@@ -142,6 +142,30 @@ check('styles.js：有追问输入区与提问行的样式',
   fs.readFileSync(path.join(extDir, 'styles.js'), 'utf8').includes('dsh-te-input') &&
   fs.readFileSync(path.join(extDir, 'styles.js'), 'utf8').includes('dsh-te-ask'))
 
+// 6) 交接：在 DSH 里开新会话 / 复制交接单
+check('content.js：有交接按钮',
+  contentSource.includes('dsh-te-handoff') && contentSource.includes('handoffMode'))
+check('content.js：交接单写明来源页面与小节',
+  contentSource.includes('划词解释 · 交接') && contentSource.includes('来源页面'))
+check('content.js：交接单带上全部问答',
+  contentSource.includes('**我问的**') && contentSource.includes('**解释**'))
+check('content.js：交接单是待命式收尾（不复述、不展开）',
+  contentSource.includes('不要总结、不要提问、不要展开'))
+check('content.js：两种交接形态由设置决定（默认开新会话）',
+  contentSource.includes("handoffMode: 'session'") && contentSource.includes("=== 'clipboard'"))
+check('background.js：调用后端的 /new-session',
+  bgSource.includes('/new-session'))
+check('background.js：交接成功后把 DSH 页面切到前台',
+  bgSource.includes('focusDsh') && bgSource.includes('chrome.tabs.query'))
+check('options.html：交接方式在「高级设置」里，且默认折叠',
+  htmlSource.includes('id="handoff"') && htmlSource.includes('<details'))
+check('options.html：两个选项是「开新会话」与「复制交接单」',
+  htmlSource.includes('value="session"') && htmlSource.includes('value="clipboard"'))
+check('options.js：保存交接方式',
+  fs.readFileSync(path.join(extDir, 'options.js'), 'utf8').includes('handoffMode'))
+check('styles.js：有交接按钮的样式',
+  fs.readFileSync(path.join(extDir, 'styles.js'), 'utf8').includes('dsh-te-handoff'))
+
 const failed = results.filter((item) => !item.ok)
 console.log(`\n合计 ${results.length} 项，失败 ${failed.length} 项`)
 process.exit(failed.length === 0 ? 0 : 1)

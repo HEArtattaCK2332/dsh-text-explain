@@ -156,8 +156,65 @@ function runExplain(job) {
   })
 }
 
+// ---- 交接：把一次问答交给 DSH 继续 ----
+
+/**
+ * 打开（或切到）DSH 页面。
+ * DSH 没有「用 URL 打开某个会话」的入口，所以只能打开它——会话由宿主建好，
+ * 已打开的页面会经 follow 流自动收到，侧栏里自己就冒出来了。
+ */
+function focusDsh(base) {
+  var root = base.replace(/\/api\/text-explain\/v1$/, '').replace(/\/+$/, '')
+  try {
+    chrome.tabs.query({ url: root + '/*' }, function (tabs) {
+      if (chrome.runtime.lastError) return
+      if (tabs && tabs.length > 0 && typeof tabs[0].id === 'number') {
+        chrome.tabs.update(tabs[0].id, { active: true })
+      } else {
+        chrome.tabs.create({ url: root + '/' })
+      }
+    })
+  } catch (_error) {
+    /* 打不开就算了：会话已经建好，用户自己切过去也一样 */
+  }
+}
+
+function handleHandoff(text) {
+  return readSettings().then(function (settings) {
+    var base = settings.endpoint.replace(/\/+$/, '')
+    var root = base.replace(/\/v1$/, '')
+    return fetch(root + '/new-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: String(text || '') })
+    })
+      .then(function (response) {
+        if (!response.ok) {
+          return response.text().then(function (detail) {
+            throw new Error('HTTP ' + response.status + (detail ? '：' + detail.slice(0, 160) : ''))
+          })
+        }
+        return response.json()
+      })
+      .then(function (data) {
+        focusDsh(base)
+        return { ok: true, sessionId: data && data.sessionId ? data.sessionId : null }
+      })
+      .catch(function (error) {
+        return { ok: false, message: error && error.message ? error.message : String(error) }
+      })
+  })
+}
+
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
-  if (!message || message.type !== 'text-explain/start') return false
+  if (!message) return false
+
+  if (message.type === 'text-explain/handoff') {
+    handleHandoff(message.text).then(sendResponse)
+    return true // 异步响应
+  }
+
+  if (message.type !== 'text-explain/start') return false
   var tabId = sender.tab && typeof sender.tab.id === 'number' ? sender.tab.id : null
   if (tabId === null) {
     sendResponse({ ok: false, message: '找不到来源标签页' })

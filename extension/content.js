@@ -395,6 +395,77 @@
     inputRow.appendChild(sendEl)
     panelEl.appendChild(inputRow)
 
+    // 交接：把这次问答（连同网页上下文）交给 DSH 继续。
+    // 两种形态由设置决定——「在 DSH 里继续」（默认）或「复制交接单」。
+    // 逻辑内联在这里，是为了少一处跨函数的状态；设置现场读取，改了立刻生效。
+    var actions = document.createElement('div')
+    actions.className = 'dsh-te-actions'
+    var handoffEl = document.createElement('button')
+    handoffEl.className = 'dsh-te-handoff'
+    handoffEl.type = 'button'
+    handoffEl.addEventListener('click', function (event) {
+      event.preventDefault()
+      event.stopPropagation()
+      if (conversation.length === 0) return
+
+      var lines = ['# 划词解释 · 交接']
+      if (pageContext) {
+        if (pageContext.title || pageContext.url) {
+          lines.push('', '**来源页面**：' + (pageContext.title || '（无标题）') +
+            (pageContext.url ? '（' + pageContext.url + '）' : ''))
+        }
+        if (pageContext.heading) lines.push('', '**所在小节**：' + pageContext.heading)
+      }
+      lines.push('', '---', '')
+      for (var i = 0; i < conversation.length; i += 1) {
+        var item = conversation[i]
+        if (item.role === 'user') lines.push('**我问的**', '', item.content, '')
+        else if (item.content.length > 0) lines.push('**解释**', '', item.content, '')
+      }
+      lines.push('---', '',
+        '以上是背景资料，交接完毕。请只回复一句「背景已了解，等你开口」——' +
+        '**不要总结、不要提问、不要展开**，等我自己开口。')
+      var document_ = lines.join('\n')
+
+      handoffEl.disabled = true
+      handoffEl.textContent = '正在交接…'
+
+      chrome.storage.local.get({ handoffMode: 'session' }, function (stored) {
+        if (stored.handoffMode === 'clipboard') {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(document_).then(function () {
+              handoffEl.textContent = '已复制 ✓ 粘进 DSH 新会话即可'
+              window.setTimeout(function () { handoffEl.disabled = false; handoffEl.textContent = '复制交接单' }, 2500)
+            }, function () {
+              handoffEl.disabled = false
+              handoffEl.textContent = '复制失败，试试「在 DSH 里继续」'
+            })
+          } else {
+            handoffEl.disabled = false
+            handoffEl.textContent = '此页面不支持复制'
+          }
+          return
+        }
+        chrome.runtime.sendMessage({ type: 'text-explain/handoff', text: document_ }, function (response) {
+          if (chrome.runtime.lastError) {
+            handoffEl.disabled = false
+            handoffEl.textContent = '交接失败：' + chrome.runtime.lastError.message
+            return
+          }
+          if (response && response.ok === true) {
+            handoffEl.textContent = '已在新会话中等你 ✓'
+            // DSH 没有「用 URL 打开某个会话」的入口，所以只能打开它、让侧栏自己冒出来
+            // （宿主建好会话后，已打开的页面会经 follow 流自动收到）
+          } else {
+            handoffEl.disabled = false
+            handoffEl.textContent = '交接失败：' + ((response && response.message) || '未知原因')
+          }
+        })
+      })
+    })
+    actions.appendChild(handoffEl)
+    panelEl.appendChild(actions)
+
     statusEl = document.createElement('div')
     statusEl.className = 'dsh-te-status'
     panelEl.appendChild(statusEl)

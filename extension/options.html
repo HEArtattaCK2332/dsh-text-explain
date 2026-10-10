@@ -91,6 +91,22 @@
       <div class="muted">浮窗里也能随时切，切换后当场重讲。这里设的是新浮窗的默认值。</div>
     </div>
 
+    <details class="card" id="advanced">
+      <summary style="cursor: pointer; font-weight: 600">高级设置</summary>
+
+      <div style="margin-top: 14px">
+        <label for="handoff">「交接」按钮做什么</label>
+        <select id="handoff">
+          <option value="session">在 DSH 里开一个新会话（推荐）—— 背景悄悄放好，会话等你开口</option>
+          <option value="clipboard">复制成一份 Markdown 交接单 —— 由你自己粘过去</option>
+        </select>
+        <div class="muted">
+          浮窗底部那个按钮的行为。选前者会调用本机 DSH 开一个新会话（<strong>不唤醒模型、不花
+          token</strong>），并自动把 DSH 页面切到前台；选后者只往剪贴板里放一段 Markdown。
+        </div>
+      </div>
+    </details>
+
     <div class="row">
       <button id="save" class="primary">保存</button>
       <button id="test">测试连接</button>

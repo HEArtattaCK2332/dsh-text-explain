@@ -7,10 +7,12 @@
 var DEFAULT_ENDPOINT = 'http://127.0.0.1:3080/api/text-explain/v1'
 var LEVELS = ['plain', 'general', 'pro']
 var TRIGGER_MODES = ['context-menu', 'selection-button', 'both']
+var HANDOFF_MODES = ['session', 'clipboard']
 
 var endpointInput = document.getElementById('endpoint')
 var levelInput = document.getElementById('level')
 var triggerInput = document.getElementById('trigger')
+var handoffInput = document.getElementById('handoff')
 var resultEl = document.getElementById('result')
 
 function setResult(text, kind) {
@@ -26,12 +28,14 @@ function normalizeEndpoint(value) {
 
 function load() {
   chrome.storage.local.get(
-    { endpoint: DEFAULT_ENDPOINT, level: 'plain', triggerMode: 'context-menu' },
+    { endpoint: DEFAULT_ENDPOINT, level: 'plain', triggerMode: 'context-menu', handoffMode: 'session' },
     function (stored) {
       endpointInput.value = normalizeEndpoint(stored.endpoint)
       levelInput.value = LEVELS.indexOf(stored.level) >= 0 ? stored.level : 'plain'
       triggerInput.value =
         TRIGGER_MODES.indexOf(stored.triggerMode) >= 0 ? stored.triggerMode : 'context-menu'
+      handoffInput.value =
+        HANDOFF_MODES.indexOf(stored.handoffMode) >= 0 ? stored.handoffMode : 'session'
     }
   )
   document.getElementById('extid').textContent = 'chrome-extension://' + chrome.runtime.id
@@ -43,7 +47,9 @@ document.getElementById('save').addEventListener('click', function () {
       endpoint: normalizeEndpoint(endpointInput.value),
       level: LEVELS.indexOf(levelInput.value) >= 0 ? levelInput.value : 'plain',
       triggerMode:
-        TRIGGER_MODES.indexOf(triggerInput.value) >= 0 ? triggerInput.value : 'context-menu'
+        TRIGGER_MODES.indexOf(triggerInput.value) >= 0 ? triggerInput.value : 'context-menu',
+      handoffMode:
+        HANDOFF_MODES.indexOf(handoffInput.value) >= 0 ? handoffInput.value : 'session'
     },
     function () {
       endpointInput.value = normalizeEndpoint(endpointInput.value)
