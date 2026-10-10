@@ -573,6 +573,74 @@ await callOpenAi('/api/text-explain/v1/chat/completions', {
 check('对外 API：enableWeb=false 时不给任何工具',
   (captured[beforeOpenAiOff].tools || []).length === 0)
 
+// 12) 模型 / 推理等级：解释与追问分开，且默认都不开推理
+const m12Settings = await callSettings('GET')
+check('设置：新增了模型与推理等级字段，且默认「关推理」',
+  m12Settings.json.explainModel === '' &&
+  m12Settings.json.followupModel === '' &&
+  m12Settings.json.explainEffort === 'off' &&
+  m12Settings.json.followupEffort === 'off' &&
+  m12Settings.json.customParamsUnlocked === false,
+  JSON.stringify({
+    explainModel: m12Settings.json.explainModel,
+    explainEffort: m12Settings.json.explainEffort,
+    followupEffort: m12Settings.json.followupEffort,
+    unlocked: m12Settings.json.customParamsUnlocked
+  }))
+
+const m12BeforeExplainEffort = captured.length
+await postExplain({ text: '第一次问，算解释' })
+check('模型：解释这一轮用的是 explainEffort（默认 off）',
+  captured[m12BeforeExplainEffort].reasoningEffort === 'off',
+  String(captured[m12BeforeExplainEffort].reasoningEffort))
+
+await callSettings('POST', Object.assign({}, m12Settings.json, {
+  explainModel: 'deepseek-v4-flash',
+  explainEffort: 'high',
+  followupEffort: 'low'
+}))
+
+const m12BeforeFollowEffort = captured.length
+await postExplain({
+  messages: [
+    { role: 'user', text: '第一问' },
+    { role: 'assistant', text: '第一次答' },
+    { role: 'user', text: '接着追问' }
+  ]
+})
+check('模型：多轮时这一轮用的是 followupEffort（此处 low）',
+  captured[m12BeforeFollowEffort].reasoningEffort === 'low',
+  String(captured[m12BeforeFollowEffort].reasoningEffort))
+check('模型：指定的模型名被采纳（deepseek-v4-flash 在可用清单里）',
+  captured[m12BeforeFollowEffort].model === 'deepseek-v4-flash',
+  String(captured[m12BeforeFollowEffort].model))
+
+const m12BeforeBadEffort = captured.length
+const badEffortSave = await callSettings('POST', Object.assign({}, m12Settings.json, {
+  explainEffort: 'telepathy'
+}))
+check('设置：非法的推理等级被洗净（回落 off，不会带进请求）',
+  badEffortSave.json.explainEffort === 'off',
+  String(badEffortSave.json.explainEffort))
+
+const m12BeforeUnknownModel = captured.length
+await callSettings('POST', Object.assign({}, m12Settings.json, {
+  explainModel: 'no-such-model-xyz'
+}))
+await postExplain({ text: '用一个不存在的模型名' })
+check('模型：不存在的模型名静默回落，不报错',
+  typeof captured[m12BeforeUnknownModel].model === 'string' &&
+  captured[m12BeforeUnknownModel].model.length > 0,
+  String(captured[m12BeforeUnknownModel].model))
+
+// 收尾：把设置还原成默认，免得影响别处
+await callSettings('POST', Object.assign({}, m12Settings.json, {
+  explainModel: '',
+  followupModel: '',
+  explainEffort: 'off',
+  followupEffort: 'off'
+}))
+
 server.close()
 fs.rmSync(tempHome, { recursive: true, force: true })
 
