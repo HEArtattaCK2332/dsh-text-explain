@@ -215,7 +215,7 @@ check('content.js：等联网时状态文案会变（让用户知道它在查）
 check('background.js：透传 forceTool',
   bgSource.includes('job.forceTool'))
 check('background.js：没设 forceTool 时不发该字段（请求保持干净）',
-  bgSource.includes('forceTool === null ? {} : { forceTool: forceTool }'))
+  bgSource.includes('if (forceTool !== null) dshBody.forceTool = forceTool'))
 
 // 10) 扩展页上的「未检查的错误」：sendMessage 失败时要读 lastError
 check('background.js：每处 tabs.sendMessage 都配了 lastError 检查',

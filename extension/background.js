@@ -19,7 +19,17 @@ var MENU_ID = 'text-explain-selection'
 
 function readSettings() {
   return chrome.storage.local
-    .get({ endpoint: DEFAULT_ENDPOINT, level: 'plain', triggerMode: 'context-menu' })
+    .get({
+      endpoint: DEFAULT_ENDPOINT,
+      level: 'plain',
+      triggerMode: 'context-menu',
+      backend: 'dsh',
+      customBaseUrl: '',
+      customApiKey: '',
+      customModel: '',
+      customSystemMerged: false,
+      customNoStream: false
+    })
     .then(function (stored) {
       return {
         endpoint:
@@ -28,9 +38,94 @@ function readSettings() {
             : DEFAULT_ENDPOINT,
         level: LEVELS.indexOf(stored.level) >= 0 ? stored.level : 'plain',
         triggerMode:
-          TRIGGER_MODES.indexOf(stored.triggerMode) >= 0 ? stored.triggerMode : 'context-menu'
+          TRIGGER_MODES.indexOf(stored.triggerMode) >= 0 ? stored.triggerMode : 'context-menu',
+        // 「dsh」＝接本机 DSH 插件；「custom」＝接用户自己的 OpenAI 兼容接口
+        backend: stored.backend === 'custom' ? 'custom' : 'dsh',
+        customBaseUrl: typeof stored.customBaseUrl === 'string' ? stored.customBaseUrl.trim() : '',
+        customApiKey: typeof stored.customApiKey === 'string' ? stored.customApiKey.trim() : '',
+        customModel: typeof stored.customModel === 'string' ? stored.customModel.trim() : '',
+        customSystemMerged: stored.customSystemMerged === true,
+        customNoStream: stored.customNoStream === true
       }
     })
+}
+
+/**
+ * 三档讲法的**内置版**，只给「自带 API」模式用。
+ *
+ * 为什么要有这一份：接本机 DSH 时，讲法由插件那一侧给；而自带 API 模式没有
+ * 我们自己的后端，只能由扩展把风格一起发过去。两边措辞**尽量一致**，
+ * 改动时记得同步（lib/index.js 的 LEVELS）。
+ */
+var LEVEL_PROMPTS = {
+  plain:
+    '把读者当成完全不懂 AI、不懂代码、也没接触过这方面知识的人。用大白话解释下面的文字：' +
+    '第一句先讲清「这段话在说什么事」，这一句里不要出现任何术语；碰到术语就当场解释它是干嘛的，' +
+    '能用生活里的例子打比方就一定打；先讲是什么，再讲有什么用。宁可啰嗦，也不要漏掉读者不懂的地方。',
+  general:
+    '把读者当成会用电脑、有常识、但没学过这一行的人。解释下面的文字：第一句先讲清「这段话在说什么事」，' +
+    '能不用术语就不用；术语第一次出现时顺手用一句话或括号解释，点到即止；先给结论，再交代为什么；' +
+    '关键处给一个短例子帮读者建立直觉。',
+  pro:
+    '把读者当成同行：熟悉技术，只是没看过这一段的具体语境。解释下面的文字：术语直接用，基础概念不必解释；' +
+    '讲机制与取舍——它怎么做、代价是什么、什么情况下不适用；涉及代码或接口时点明关键字段与数据流向；' +
+    '写清结论成立的前提与已知的反例或例外。不打比方、不铺垫，直给结论与要点。'
+}
+
+/**
+ * 按设置决定：这次请求打哪里、带什么头、发什么体。
+ *
+ * - dsh    ：本机 DSH 插件的 OpenAI 兼容层。三档讲法由它提供，还能强制联网。
+ * - custom ：任意 OpenAI 兼容接口（DeepSeek / OpenAI / Gemini / 本机 Ollama…）。
+ *            讲法改由扩展自己拼系统提示词；没有联网工具（那是 DSH 的能力）。
+ */
+function resolveTarget(settings, level, job) {
+  var outgoing = Array.isArray(job.messages) && job.messages.length > 0
+    ? job.messages.slice()
+    : [{ role: 'user', content: String(job.text || '') }]
+
+  if (settings.backend !== 'custom') {
+    var forceTool = job.forceTool === 'web' || job.forceTool === 'file' ? job.forceTool : null
+    var dshBody = {
+      model: 'text-explain-' + level,
+      messages: outgoing,
+      stream: true
+    }
+    if (forceTool !== null) dshBody.forceTool = forceTool
+    return {
+      url: settings.endpoint.replace(/\/+$/, '') + '/chat/completions',
+      headers: { 'Content-Type': 'application/json' },
+      body: dshBody,
+      stream: true
+    }
+  }
+
+  var base = String(settings.customBaseUrl || '').replace(/\/+$/, '')
+  if (base.length === 0) throw new Error('还没有填 API 地址')
+  var model = String(settings.customModel || '').trim()
+  if (model.length === 0) throw new Error('还没有填模型名')
+
+  var style = LEVEL_PROMPTS[level] || LEVEL_PROMPTS.plain
+  if (settings.customSystemMerged === true && outgoing.length > 0 && outgoing[0].role === 'user') {
+    // 有些本地模型不认 system 角色：并进第一条 user 消息
+    outgoing[0] = { role: 'user', content: style + '\n\n---\n\n' + outgoing[0].content }
+  } else {
+    outgoing.unshift({ role: 'system', content: style })
+  }
+
+  var headers = { 'Content-Type': 'application/json' }
+  if (settings.customApiKey.length > 0) headers.Authorization = 'Bearer ' + settings.customApiKey
+
+  return {
+    url: base + '/chat/completions',
+    headers: headers,
+    body: {
+      model: model,
+      messages: outgoing,
+      stream: settings.customNoStream !== true
+    },
+    stream: settings.customNoStream !== true
+  }
 }
 
 // ---- 右键菜单 ----
@@ -79,7 +174,6 @@ chrome.contextMenus.onClicked.addListener(function (info, tab) {
 
 function runExplain(job) {
   return readSettings().then(function (settings) {
-    var url = settings.endpoint.replace(/\/+$/, '') + '/chat/completions'
     var level = LEVELS.indexOf(job.level) >= 0 ? job.level : settings.level
 
     function send(payload) {
@@ -101,24 +195,19 @@ function runExplain(job) {
       }
     }
 
-    // 多轮：内容脚本会把完整对话历史发过来；旧调用只给一段 text 也照样能用。
-    var outgoing = Array.isArray(job.messages) && job.messages.length > 0
-      ? job.messages
-      : [{ role: 'user', content: String(job.text || '') }]
-    // 「联网搜索」按钮设的强制标记；没设就不发这个字段，请求保持干净
-    var forceTool = job.forceTool === 'web' || job.forceTool === 'file' ? job.forceTool : null
+    var target
+    try {
+      target = resolveTarget(settings, level, job)
+    } catch (error) {
+      send({ type: 'text-explain/error', message: error && error.message ? error.message : String(error) })
+      return
+    }
+    var url = target.url
 
     return fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(Object.assign(
-        {
-          model: 'text-explain-' + level,
-          messages: outgoing,
-          stream: true
-        },
-        forceTool === null ? {} : { forceTool: forceTool }
-      ))
+      headers: target.headers,
+      body: JSON.stringify(target.body)
     })
       .then(function (response) {
         if (!response.ok) {
@@ -126,6 +215,24 @@ function runExplain(job) {
             throw new Error('HTTP ' + response.status + (detail ? '：' + detail.slice(0, 200) : ''))
           })
         }
+        // 自定义后端可能被设成「不用流式」（少数服务不支持 SSE），
+        // 那时响应是一份普通 JSON，一次性取出来即可。
+        if (target.stream === false) {
+          return response.json().then(function (data) {
+            var choice = data && data.choices && data.choices[0]
+            var text =
+              choice && choice.message && typeof choice.message.content === 'string'
+                ? choice.message.content
+                : ''
+            if (text.length === 0) {
+              send({ type: 'text-explain/error', message: '接口没有返回内容（检查模型名与地址）' })
+              return
+            }
+            send({ type: 'text-explain/chunk', text: text })
+            send({ type: 'text-explain/done' })
+          })
+        }
+
         if (!response.body) throw new Error('后端没有返回流')
 
         var reader = response.body.getReader()
