@@ -258,7 +258,7 @@ const preflightAllowed = await fetch(`http://127.0.0.1:${port}/api/text-explain`
 check('登记后的预检给出 Allow-Methods / Allow-Headers',
   preflightAllowed.status === 204 &&
   (preflightAllowed.headers.get('access-control-allow-methods') || '').includes('POST') &&
-  (preflightAllowed.headers.get('access-control-allow-headers') || '').toLowerCase().includes('content-type'),
+  preflightAllowed.headers.get('access-control-allow-headers') === '*',
   `${preflightAllowed.status} / ${preflightAllowed.headers.get('access-control-allow-methods')}`)
 
 const strangerOrigin = await callExplain({ text: '别的源', enableWeb: false, enableFile: false }, { Origin: 'https://evil.example' })
