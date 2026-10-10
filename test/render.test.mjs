@@ -156,7 +156,7 @@ check('默认档「小白」处于选中态（● 前缀）',
 check('会话落点两个选项齐备', collapsedView.buttons.some((b) => buttonLabel(b).includes('与当前对话同工作区')) &&
   collapsedView.buttons.some((b) => buttonLabel(b).includes('未分组')))
 check('高级设置折叠时不渲染高级项', collapsedView.buttons.some((b) => buttonLabel(b).includes('高级设置')) &&
-  !collapsedView.text.includes('工具开关的默认值'))
+  !collapsedView.text.includes('工具：平时给不给模型'))
 check('收起态按钮数 = 8（刷新/保存 + 3 档 + 2 落点 + 高级折叠）',
   collapsedView.buttons.length === 8, collapsedView.buttons.map(buttonLabel).join(' / '))
 
@@ -168,10 +168,13 @@ check('高级展开 + 有改动时渲染不抛错', expanded.tree !== null && ex
 const expandedView = collect(expanded.tree)
 check('有改动时提示「有未保存的改动」', expandedView.text.includes('有未保存的改动'),
   expandedView.text.slice(0, 200))
-check('高级区出现「工具开关的默认值」', expandedView.text.includes('工具开关的默认值'))
-check('高级区两项默认开关齐备', expandedView.buttons.some((b) => buttonLabel(b).includes('默认开启联网')) &&
-  expandedView.buttons.some((b) => buttonLabel(b).includes('默认开启读文件')))
-check('展开态按钮数 = 10', expandedView.buttons.length === 10, expandedView.buttons.map(buttonLabel).join(' / '))
+check('高级区出现「工具：平时给不给模型」', expandedView.text.includes('工具：平时给不给模型'))
+check('高级区四项开关齐备（两个「默认给不给」+ 两个「显不显示」）',
+  expandedView.buttons.some((b) => buttonLabel(b).includes('默认开启联网')) &&
+  expandedView.buttons.some((b) => buttonLabel(b).includes('默认开启本地查找')) &&
+  expandedView.buttons.some((b) => buttonLabel(b).includes('显示「联网搜索」')) &&
+  expandedView.buttons.some((b) => buttonLabel(b).includes('显示「本地搜索」')))
+check('展开态按钮数 = 12（比原来多两个「显示按钮」开关）', expandedView.buttons.length === 12, expandedView.buttons.map(buttonLabel).join(' / '))
 check('草稿里的档位（专业）处于选中态',
   expandedView.buttons.some((b) => buttonLabel(b) === '● 专业'))
 check('草稿里关掉的「默认开启联网」显示为未选中',
@@ -255,9 +258,9 @@ check('当前档位 pro 处于选中态（蓝边高亮）',
   answeredView.buttons.some((b) => buttonLabel(b) === '专业' && isActiveStyle(b)),
   answeredView.buttons.map((b) => buttonLabel(b) + (isActiveStyle(b) ? '(选中)' : '')).join(' / '))
 check('非当前档位不是选中态', answeredView.buttons.some((b) => buttonLabel(b) === '小白' && !isActiveStyle(b)))
-check('仍保留「联网」「读文件」「新建为对话」三个按钮',
-  answeredView.buttons.some((b) => buttonLabel(b).includes('联网')) &&
-  answeredView.buttons.some((b) => buttonLabel(b).includes('读文件')) &&
+check('仍保留「联网搜索」「本地搜索」「新建为对话」三个按钮',
+  answeredView.buttons.some((b) => buttonLabel(b).includes('联网搜索')) &&
+  answeredView.buttons.some((b) => buttonLabel(b).includes('本地搜索')) &&
   answeredView.buttons.some((b) => buttonLabel(b).includes('新建为对话')))
 check('Markdown 渲染出标题 / 表格 / 代码块 / 引用 / 链接',
   ['h2', 'table', 'pre', 'blockquote', 'a'].every((tag) => {

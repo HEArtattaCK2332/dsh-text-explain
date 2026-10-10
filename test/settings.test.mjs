@@ -123,11 +123,13 @@ const full = {
   explainLevel: 'plain',
   webDefault: true,
   fileDefault: true,
+  showWebButton: true,
+  showFileButton: true,
   advancedVisible: false,
   allowedOrigins: []
 }
 
-check('空数据 → 全套六字段默认值', JSON.stringify(makeSettingsEnv().api.normalizeSettings(null)) === JSON.stringify(full))
+check('空数据 → 全套八字段默认值', JSON.stringify(makeSettingsEnv().api.normalizeSettings(null)) === JSON.stringify(full))
 check('脏数据被洗净成合法默认值',
   JSON.stringify(makeSettingsEnv().api.normalizeSettings({
     newSessionTarget: 'nowhere', explainLevel: 'ultra-mega', webDefault: 'yes', fileDefault: 0,
@@ -189,7 +191,7 @@ const savedByHost = await env.api.saveSettings(draft)
 const lastCall = env.calls[env.calls.length - 1]
 check('保存走 POST', Boolean(lastCall.options && lastCall.options.method === 'POST'))
 check('保存发到设置端点', lastCall.url === '/api/text-explain/settings')
-check('保存提交的是整份六字段设置（不是增量补丁）',
+check('保存提交的是整份八字段设置（不是增量补丁）',
   JSON.stringify(Object.keys(JSON.parse(lastCall.options.body)).sort()) ===
   JSON.stringify(Object.keys(full).sort()),
   lastCall.options.body)
