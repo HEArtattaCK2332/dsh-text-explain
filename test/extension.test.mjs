@@ -217,6 +217,12 @@ check('background.js：透传 forceTool',
 check('background.js：没设 forceTool 时不发该字段（请求保持干净）',
   bgSource.includes('forceTool === null ? {} : { forceTool: forceTool }'))
 
+// 10) 扩展页上的「未检查的错误」：sendMessage 失败时要读 lastError
+check('background.js：每处 tabs.sendMessage 都配了 lastError 检查',
+  (bgSource.match(/tabs\.sendMessage/g) || []).length <=
+  (bgSource.match(/runtime\.lastError/g) || []).length,
+  `sendMessage ${(bgSource.match(/tabs\.sendMessage/g) || []).length} 处 / lastError ${(bgSource.match(/runtime\.lastError/g) || []).length} 处`)
+
 const failed = results.filter((item) => !item.ok)
 console.log(`\n合计 ${results.length} 项，失败 ${failed.length} 项`)
 process.exit(failed.length === 0 ? 0 : 1)

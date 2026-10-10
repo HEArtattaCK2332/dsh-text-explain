@@ -57,10 +57,19 @@ chrome.contextMenus.onClicked.addListener(function (info, tab) {
   if (info.menuItemId !== MENU_ID) return
   if (!tab || typeof tab.id !== 'number') return
   try {
-    chrome.tabs.sendMessage(tab.id, {
-      type: 'text-explain/open',
-      text: String(info.selectionText || '')
-    })
+    chrome.tabs.sendMessage(
+      tab.id,
+      {
+        type: 'text-explain/open',
+        text: String(info.selectionText || '')
+      },
+      function () {
+        // 同上：必须读 lastError，否则 Chrome 会记一条未检查的错误
+        if (chrome.runtime.lastError) {
+          /* 该页没有内容脚本（例如 chrome:// 页），忽略 */
+        }
+      }
+    )
   } catch (_error) {
     /* 该标签页不允许注入，忽略 */
   }
@@ -75,7 +84,18 @@ function runExplain(job) {
 
     function send(payload) {
       try {
-        chrome.tabs.sendMessage(job.tabId, Object.assign({ requestId: job.requestId }, payload))
+        // 回调里必须读一下 lastError：目标页可能没有内容脚本（chrome:// 页、
+        // 刚装扩展还没刷新的页、PDF 阅读器…），那时 sendMessage 会失败。
+        // 不读它，Chrome 就会在扩展页上标一条「未检查的错误」（background.js:0）。
+        chrome.tabs.sendMessage(
+          job.tabId,
+          Object.assign({ requestId: job.requestId }, payload),
+          function () {
+            if (chrome.runtime.lastError) {
+              /* 收不到就算了，不必打扰用户 */
+            }
+          }
+        )
       } catch (_error) {
         /* 标签页可能已经关了，忽略 */
       }
