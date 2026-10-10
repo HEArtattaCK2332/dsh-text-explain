@@ -481,6 +481,51 @@ const handoffStranger = await fetch(handoffUrl, {
 check('交接：陌生来源一律 403（不让别人的网页指挥 DSH 开会话）',
   handoffStranger.status === 403, `HTTP ${handoffStranger.status}`)
 
+// 10) 工具：默认听设置（模型自主判断），以及用户的「强制触发」
+async function postExplain(body) {
+  const res = await fetch(`http://127.0.0.1:${port}/api/text-explain`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+  return res.text()
+}
+
+const beforeToolDefault = captured.length
+await postExplain({ text: '不带工具参数' })
+check('工具：请求没说时按设置里的默认（默认开）→ 工具已交给模型自主判断',
+  Array.isArray(captured[beforeToolDefault].tools) && captured[beforeToolDefault].tools.length > 0,
+  `工具数 ${captured[beforeToolDefault].tools ? captured[beforeToolDefault].tools.length : 0}`)
+
+const beforeToolOff = captured.length
+await postExplain({ text: '明确关掉', enableWeb: false, enableFile: false })
+check('工具：请求明确关掉时，一个工具都不给',
+  !captured[beforeToolOff].tools || captured[beforeToolOff].tools.length === 0,
+  JSON.stringify(captured[beforeToolOff].tools))
+
+const beforeForceWeb = captured.length
+await postExplain({ text: '强制联网', enableWeb: false, enableFile: false, forceTool: 'web' })
+const forcedSystem = captured[beforeForceWeb].system
+check('强制触发：即便原本关着，也把该工具交给模型',
+  Array.isArray(captured[beforeForceWeb].tools) && captured[beforeForceWeb].tools.length > 0)
+check('强制触发：系统提示里加了「用户主动要求补充检索」这一段（独有标记）',
+  forcedSystem.includes('【本轮是用户主动要求的补充检索】'))
+check('强制触发（联网）：这一段点名「联网搜索」并要求先动手查',
+  forcedSystem.includes('他点了「联网搜索」') && forcedSystem.includes('动手查一次'))
+check('强制触发：**明确要求不复述已讲过的内容**',
+  forcedSystem.includes('不要复述'))
+check('强制触发：要求只补充新查到的东西',
+  forcedSystem.includes('新查到'))
+const beforeForceUnknown = captured.length
+await postExplain({ text: '乱传', forceTool: 'telepathy' })
+check('强制触发：不认识的取值不影响正常流程（既不报错，也不误当强制）',
+  !captured[beforeForceUnknown].system.includes('【本轮是用户主动要求的补充检索】'))
+
+const beforeForceFile = captured.length
+await postExplain({ text: '强制查本地', forceTool: 'file' })
+check('强制触发（本地）：这一段点名「本地搜索」',
+  captured[beforeForceFile].system.includes('他点了「本地搜索」'))
+
 server.close()
 fs.rmSync(tempHome, { recursive: true, force: true })
 
