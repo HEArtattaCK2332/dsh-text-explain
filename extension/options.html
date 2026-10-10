@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>Text Explain 设置</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        margin: 0;
+        padding: 24px;
+        max-width: 620px;
+        font: 14px/1.7 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+          "Microsoft YaHei", sans-serif;
+        background: #fff;
+        color: #1f2328;
+      }
+      @media (prefers-color-scheme: dark) {
+        body { background: #1f2225; color: #e6e6e6; }
+        .card { background: #26292c; border-color: #3a3f44; }
+        input, select { background: #1f2225; color: #e6e6e6; border-color: #3a3f44; }
+        .muted { color: #9aa0a6; }
+        code { background: #2a2e33; }
+      }
+      h1 { font-size: 18px; margin: 0 0 16px; }
+      .card {
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 16px;
+        margin-bottom: 14px;
+        background: #fafafa;
+      }
+      label { display: block; font-weight: 600; margin-bottom: 6px; }
+      input, select {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px 10px;
+        border: 1px solid #d0d7de;
+        border-radius: 8px;
+        font: inherit;
+      }
+      .muted { color: #6b7280; font-size: 12.5px; margin-top: 6px; }
+      code { background: #eef1f4; padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+      .row { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+      button {
+        padding: 8px 14px;
+        border: 1px solid #d0d7de;
+        border-radius: 8px;
+        background: #fff;
+        font: inherit;
+        cursor: pointer;
+      }
+      button.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+      #result { margin-top: 10px; font-size: 13px; white-space: pre-wrap; }
+      .ok { color: #15803d; }
+      .bad { color: #b91c1c; }
+      .id { font-family: ui-monospace, Consolas, monospace; word-break: break-all; }
+    </style>
+  </head>
+  <body>
+    <h1>Text Explain（划词解释）</h1>
+
+    <div class="card">
+      <label for="endpoint">本机后端地址</label>
+      <input id="endpoint" type="text" spellcheck="false" />
+      <div class="muted">
+        默认是 DSH 的 <code>dsh-text-explain</code> 插件提供的接口。改这里可以把解释请求接到别的
+        OpenAI 兼容服务上。
+      </div>
+    </div>
+
+    <div class="card">
+      <label for="level">默认讲法</label>
+      <select id="level">
+        <option value="plain">小白 —— 完全不懂 AI、不懂代码的人</option>
+        <option value="general">通识 —— 会用电脑、有常识，但没学过这一行</option>
+        <option value="pro">专业 —— 同行：术语直接用，讲机制、取舍与边界</option>
+      </select>
+      <div class="muted">浮窗里也能随时切，切换后当场重讲。这里设的是新浮窗的默认值。</div>
+    </div>
+
+    <div class="row">
+      <button id="save" class="primary">保存</button>
+      <button id="test">测试连接</button>
+      <span id="result"></span>
+    </div>
+
+    <div class="card" style="margin-top: 18px">
+      <label>本扩展的 ID</label>
+      <div class="id" id="extid">—</div>
+      <div class="muted">
+        本扩展使用固定 ID（由 <code>manifest.json</code> 的 <code>key</code> 推出），所以后端白名单
+        可以预先登记它。若 DSH 那边报「origin not allowed」，把这个 ID 按
+        <code>chrome-extension://&lt;ID&gt;</code> 的格式加进
+        <code>&lt;DSH_HOME&gt;/text-explain/settings.json</code> 的 <code>allowedOrigins</code> 即可。
+      </div>
+    </div>
+
+    <script src="options.js"></script>
+  </body>
+</html>

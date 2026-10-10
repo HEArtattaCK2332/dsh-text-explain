@@ -1,11 +1,11 @@
-// 一把跑完三份自检：宿主半、设置层、渲染冒烟。
+// 一把跑完四份自检：宿主半、设置层、渲染冒烟、浏览器扩展。
 // 用法: node test/run-all.mjs        （只依赖 Node 内置模块，无需安装任何东西）
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
-const suites = ['host.test.mjs', 'settings.test.mjs', 'render.test.mjs']
+const suites = ['host.test.mjs', 'settings.test.mjs', 'render.test.mjs', 'extension.test.mjs']
 
 let failed = 0
 for (const suite of suites) {

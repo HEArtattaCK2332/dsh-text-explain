@@ -86,6 +86,16 @@ draft away and re-reads what is stored. **Nothing you did not save is ever
 written to disk** — not to the config file, not to browser storage (this plugin
 stores nothing in the browser at all).
 
+## Browser extension
+
+The same backend also powers a browser extension: select any passage on any web
+page and read the explanation in a floating panel (three depths, switchable on
+the spot). Source lives in [`extension/`](extension/) with its own
+[README](extension/README.md).
+
+Load it unpacked: open `chrome://extensions/`, turn on **Developer mode**, click
+**Load unpacked**, and pick the `extension/` folder.
+
 ## Use it from other apps
 
 The host half also speaks the **OpenAI chat-completions protocol**, so any client
