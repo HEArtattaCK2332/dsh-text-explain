@@ -1,11 +1,12 @@
 {
   "manifest_version": 3,
   "name": "Text Explain — 划词解释（dsh-text-explain）",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "划中网页上任何一段看不懂的话，本地 DeepSeek Harness 用大白话讲给你听。三档讲法，与 DSH 里的划词解释同一套后端。",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAk50h7ludL86xw1lwgwyWot7z3fMwuiq06kgn18OD9OE3uVE25Fb0hXJt6kjIfDQg4bHSBNq5Ce/AxcYAFiRepgUA626BO8n0tw7bJBzpZ1HhoywYEBdSz452Ruap6wgQqlerYij6sWBTUm1fsYUMWTE/Az5aQu+4BW+kr7sPCBfLSXicBKTBMqxH5asaMrFjtUp4SweZDgweZ9DZI4M9wFkDEkbYnfjRfhXxFoEyXTodxLtq6tQ9vnbm2T2Mq1dssRFtrACVp/M96BUaf5nb8/ePctCDTVI50qbUAgVGKM+g4xU1YIO+3baTc9Se1bVmKu+wTyzcAKyE1N/usHRTTQIDAQAB",
   "permissions": [
-    "storage"
+    "storage",
+    "contextMenus"
   ],
   "host_permissions": [
     "http://127.0.0.1:3080/*",

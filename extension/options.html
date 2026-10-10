@@ -60,6 +60,19 @@
     <h1>Text Explain（划词解释）</h1>
 
     <div class="card">
+      <label for="trigger">什么时候出来</label>
+      <select id="trigger">
+        <option value="context-menu">只在右键菜单里（推荐）—— 日常浏览最不打扰</option>
+        <option value="selection-button">划词后浮出小按钮 —— 少点一下，但读文章时容易误触</option>
+        <option value="both">两者都要</option>
+      </select>
+      <div class="muted">
+        选「右键菜单」时不会出现划词小按钮；选中文字后右键，菜单里会有
+        <strong>「用大白话解释『…』」</strong>。
+      </div>
+    </div>
+
+    <div class="card">
       <label for="endpoint">本机后端地址</label>
       <input id="endpoint" type="text" spellcheck="false" />
       <div class="muted">

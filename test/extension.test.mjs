@@ -47,8 +47,8 @@ const manifest = JSON.parse(fs.readFileSync(path.join(extDir, 'manifest.json'), 
 check('manifest：MV3', manifest.manifest_version === 3)
 check('manifest：带固定 key（扩展 ID 才稳定）',
   typeof manifest.key === 'string' && manifest.key.length > 300, `key 长度 ${manifest.key.length}`)
-check('manifest：只申请 storage 权限',
-  JSON.stringify(manifest.permissions) === JSON.stringify(['storage']),
+check('manifest：只申请 storage + contextMenus 权限',
+  JSON.stringify(manifest.permissions) === JSON.stringify(['storage', 'contextMenus']),
   JSON.stringify(manifest.permissions))
 check('manifest：host_permissions 覆盖本机后端',
   manifest.host_permissions.some((item) => item.indexOf('127.0.0.1:3080') >= 0),
@@ -90,6 +90,30 @@ const htmlSource = fs.readFileSync(path.join(extDir, 'options.html'), 'utf8')
 check('options.html：不内联脚本（MV3 CSP 禁止）', !/<script(?![^>]*\ssrc=)/i.test(htmlSource))
 check('options.html：引用了 options.js', htmlSource.includes('src="options.js"'))
 check('options.html：显示扩展 ID（便于登记白名单）', htmlSource.includes('extid'))
+
+// 4) 触发方式：默认右键菜单，划词按钮可选
+check('background.js：建右键菜单（只在选中文字时出现）',
+  bgSource.includes('chrome.contextMenus.create') && bgSource.includes("contexts: ['selection']"))
+check('background.js：默认触发方式是右键菜单',
+  bgSource.includes("triggerMode: 'context-menu'"))
+check('background.js：选了「划词按钮」模式就不建右键项',
+  bgSource.includes("mode === 'selection-button'"))
+check('background.js：右键后通知内容脚本开浮窗',
+  bgSource.includes('text-explain/open'))
+check('background.js：能列出三种触发方式',
+  bgSource.includes('context-menu') && bgSource.includes('selection-button') && bgSource.includes('both'))
+check('content.js：按设置决定要不要出小按钮',
+  contentSource.includes('wantsSelectionButton'))
+check('content.js：处理右键菜单来的 open 指令',
+  contentSource.includes("message.type === 'text-explain/open'"))
+check('content.js：设置变化时立即生效（不用刷新页面）',
+  contentSource.includes('chrome.storage.onChanged'))
+check('options.html：有触发方式选择，且默认项是右键菜单',
+  htmlSource.includes('id="trigger"') &&
+  htmlSource.includes('value="context-menu"') &&
+  htmlSource.includes('value="selection-button"'))
+check('options.js：保存触发方式',
+  fs.readFileSync(path.join(extDir, 'options.js'), 'utf8').includes('triggerMode'))
 
 const failed = results.filter((item) => !item.ok)
 console.log(`\n合计 ${results.length} 项，失败 ${failed.length} 项`)
