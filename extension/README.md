@@ -13,6 +13,36 @@
 
 装好后它的 ID 应当是 **`flllhbaameongigaidcdonkdinpajaid`**（由 `manifest.json` 里的 `key` 固定，换机器也不变）。
 
+## 在 Firefox 上用
+
+**源码完全共用**——因为 Firefox 也支持 `chrome.*` 这套命名。唯一的硬差异在 manifest 的后台写法：
+
+| | Chrome / Edge（MV3） | Firefox（MV3） |
+| --- | --- | --- |
+| 后台 | `"service_worker": "background.js"` | `"scripts": ["background.js"]` |
+
+所以本目录里有两份 manifest：`manifest.json`（Chrome/Edge 用）与 `manifest.firefox.json`（Firefox 用，由 `node extension/build-firefox-manifest.cjs extension` 生成）。
+
+**试用（立刻能跑）**：
+
+1. 打开 `about:debugging#/runtime/this-firefox`
+2. 点 **临时载入附加组件**
+3. 选中本目录里的 **`manifest.firefox.json`**
+
+> ⚠️ 临时载入的扩展**关闭浏览器就没了**——只适合试用与调试。
+
+**正式发布**：上架 [AMO（addons.mozilla.org）](https://addons.mozilla.org/developers/)——**免费**，审核通常几小时到几天。打包时把 `manifest.firefox.json` **改名成 `manifest.json`** 再压成 zip 上传（其余文件照旧）。
+
+## 打包成 zip
+
+```powershell
+# 1) 生成 Firefox 版 manifest
+node extension/build-firefox-manifest.cjs extension
+
+# 2) 各打一份：Firefox 那份记得把 manifest.firefox.json 改名成 manifest.json
+Compress-Archive -Path extension\* -DestinationPath dist\text-explain-firefox.zip -Force
+```
+
 ## 用法
 
 **默认走右键菜单**（日常浏览最不打扰）：

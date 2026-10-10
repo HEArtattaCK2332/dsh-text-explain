@@ -1,0 +1,47 @@
+{
+  "manifest_version": 3,
+  "name": "Text Explain — 划词解释（dsh-text-explain）",
+  "version": "0.3.0",
+  "description": "划中网页上任何一段看不懂的话，本地 DeepSeek Harness 用大白话讲给你听。三档讲法，与 DSH 里的划词解释同一套后端。",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAk50h7ludL86xw1lwgwyWot7z3fMwuiq06kgn18OD9OE3uVE25Fb0hXJt6kjIfDQg4bHSBNq5Ce/AxcYAFiRepgUA626BO8n0tw7bJBzpZ1HhoywYEBdSz452Ruap6wgQqlerYij6sWBTUm1fsYUMWTE/Az5aQu+4BW+kr7sPCBfLSXicBKTBMqxH5asaMrFjtUp4SweZDgweZ9DZI4M9wFkDEkbYnfjRfhXxFoEyXTodxLtq6tQ9vnbm2T2Mq1dssRFtrACVp/M96BUaf5nb8/ePctCDTVI50qbUAgVGKM+g4xU1YIO+3baTc9Se1bVmKu+wTyzcAKyE1N/usHRTTQIDAQAB",
+  "permissions": [
+    "storage",
+    "contextMenus"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:3080/*",
+    "http://localhost:3080/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "markdown.js",
+        "styles.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true,
+    "browser_style": true
+  },
+  "action": {
+    "default_title": "Text Explain：点此打开设置"
+  },
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "text-explain@heartattack2332.github.io",
+      "strict_min_version": "115.0"
+    }
+  }
+}

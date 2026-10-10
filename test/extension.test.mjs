@@ -178,6 +178,31 @@ check('styles.js：折叠摘要单行省略、展开区限高可滚',
   fs.readFileSync(path.join(extDir, 'styles.js'), 'utf8').includes('dsh-te-ctx summary') &&
   fs.readFileSync(path.join(extDir, 'styles.js'), 'utf8').includes('dsh-te-ctx-line'))
 
+// 8) Firefox：源码共用，只换一份 manifest
+const firefoxManifestPath = path.join(extDir, 'manifest.firefox.json')
+check('Firefox：仓库里有 manifest.firefox.json', fs.existsSync(firefoxManifestPath))
+if (fs.existsSync(firefoxManifestPath)) {
+  const firefoxManifest = JSON.parse(fs.readFileSync(firefoxManifestPath, 'utf8'))
+  check('Firefox：后台写成 background.scripts（Firefox 不支持 service_worker）',
+    Array.isArray(firefoxManifest.background.scripts) &&
+    firefoxManifest.background.service_worker === undefined,
+    JSON.stringify(firefoxManifest.background))
+  check('Firefox：带 gecko id（用于记住权限与更新）',
+    Boolean(firefoxManifest.browser_specific_settings &&
+      firefoxManifest.browser_specific_settings.gecko &&
+      firefoxManifest.browser_specific_settings.gecko.id),
+    JSON.stringify(firefoxManifest.browser_specific_settings))
+  check('Firefox：其余关键字段与 Chrome 版逐字一致（所以源码能共用）',
+    firefoxManifest.manifest_version === manifest.manifest_version &&
+    JSON.stringify(firefoxManifest.permissions) === JSON.stringify(manifest.permissions) &&
+    JSON.stringify(firefoxManifest.host_permissions) === JSON.stringify(manifest.host_permissions) &&
+    JSON.stringify(firefoxManifest.content_scripts) === JSON.stringify(manifest.content_scripts))
+  check('Firefox：设置页用 browser_style 贴合原生外观',
+    Boolean(firefoxManifest.options_ui && firefoxManifest.options_ui.browser_style === true))
+}
+check('Firefox：仓库里有生成脚本（可重复执行）',
+  fs.existsSync(path.join(extDir, 'build-firefox-manifest.cjs')))
+
 const failed = results.filter((item) => !item.ok)
 console.log(`\n合计 ${results.length} 项，失败 ${failed.length} 项`)
 process.exit(failed.length === 0 ? 0 : 1)
