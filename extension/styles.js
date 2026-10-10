@@ -172,9 +172,29 @@ var TextExplainStyles = `
   }
   .dsh-te-ask:first-child { margin-top: 0; }
   .dsh-te-ctx {
-    margin: 0 0 8px;
+    margin: 0 0 10px;
+    padding: 4px 8px;
+    border: 1px solid var(--te-border);
+    border-radius: 8px;
     color: var(--te-muted);
     font-size: 12px;
+  }
+  .dsh-te-ctx summary {
+    cursor: pointer;
+    list-style: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .dsh-te-ctx summary::-webkit-details-marker { display: none; }
+  .dsh-te-ctx-line {
+    margin-top: 6px;
+    padding-left: 6px;
+    border-left: 2px solid var(--te-border);
+    max-height: 9em;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
   }
 
   .dsh-te-input {

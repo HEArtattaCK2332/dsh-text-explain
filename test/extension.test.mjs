@@ -166,6 +166,18 @@ check('options.js：保存交接方式',
 check('styles.js：有交接按钮的样式',
   fs.readFileSync(path.join(extDir, 'styles.js'), 'utf8').includes('dsh-te-handoff'))
 
+// 7) 语境显示：显示与发送分离，且默认折叠（回归断言）
+check('content.js：显示与发送分离——显示原文，发送才带上下文',
+  contentSource.includes('full: composeFirstMessage') &&
+  contentSource.includes('message.full || message.content'))
+check('content.js：语境默认折叠（details / summary）',
+  contentSource.includes('<details class="dsh-te-ctx">') && contentSource.includes('语境：'))
+check('content.js：不再把整段上下文当用户提问渲染',
+  !contentSource.includes("conversation[0].content = composeFirstMessage"))
+check('styles.js：折叠摘要单行省略、展开区限高可滚',
+  fs.readFileSync(path.join(extDir, 'styles.js'), 'utf8').includes('dsh-te-ctx summary') &&
+  fs.readFileSync(path.join(extDir, 'styles.js'), 'utf8').includes('dsh-te-ctx-line'))
+
 const failed = results.filter((item) => !item.ok)
 console.log(`\n合计 ${results.length} 项，失败 ${failed.length} 项`)
 process.exit(failed.length === 0 ? 0 : 1)

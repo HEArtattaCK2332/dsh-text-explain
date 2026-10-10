@@ -263,9 +263,20 @@
   function renderConversation() {
     if (bodyEl === null) return
     var html = []
-    if (pageContext && (pageContext.heading || pageContext.title)) {
-      var where = pageContext.heading || pageContext.title
-      html.push('<div class="dsh-te-ctx">语境取自：' + TextExplainMarkdown(where) + '</div>')
+    // 语境默认折叠：它动辄上千字，摊开会把回答挤没
+    if (pageContext && (pageContext.heading || pageContext.title || pageContext.paragraph)) {
+      var where = pageContext.heading || pageContext.title || '本页'
+      html.push('<details class="dsh-te-ctx"><summary>📎 语境：' + TextExplainMarkdown(where) + '</summary>')
+      if (pageContext.title) {
+        html.push('<div class="dsh-te-ctx-line">页面：' + TextExplainMarkdown(pageContext.title) + '</div>')
+      }
+      if (pageContext.heading) {
+        html.push('<div class="dsh-te-ctx-line">小节：' + TextExplainMarkdown(pageContext.heading) + '</div>')
+      }
+      if (pageContext.paragraph) {
+        html.push('<div class="dsh-te-ctx-line">段落：' + TextExplainMarkdown(pageContext.paragraph) + '</div>')
+      }
+      html.push('</details>')
     }
     for (var i = 0; i < conversation.length; i += 1) {
       var message = conversation[i]
@@ -301,7 +312,12 @@
     hideTrigger()
 
     pageContext = collectPageContext()
-    conversation = [{ role: 'user', content: content }]
+    // 分开两件事：content 是「显示用」（用户实际选中的那句），
+    // full 是「发送用」（含网页上下文）。合成一份的话，那一大段页面原文
+    // 会当成用户提问铺满浮窗——这正是上一版的问题。
+    conversation = [
+      { role: 'user', content: content, full: composeFirstMessage(content, pageContext) }
+    ]
 
     panelEl = document.createElement('div')
     panelEl.className = 'dsh-te-panel'
@@ -489,8 +505,6 @@
     panelEl.style.left = Math.round(left) + 'px'
     panelEl.style.top = Math.round(box.top + box.height + 10) + 'px'
 
-    // 第一条消息带上网页上下文
-    conversation[0].content = composeFirstMessage(content, pageContext)
     renderConversation()
     ask()
     if (inputEl !== null) inputEl.focus()
@@ -502,7 +516,7 @@
     for (var i = 0; i < conversation.length; i += 1) {
       var message = conversation[i]
       if (message.role === 'assistant' && message.content.length === 0) continue // 空占位不发
-      outgoing.push({ role: message.role, content: message.content })
+      outgoing.push({ role: message.role, content: message.full || message.content })
     }
     return outgoing
   }
