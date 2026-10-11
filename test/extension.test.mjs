@@ -268,6 +268,13 @@ check('content.js：自定义模式交接按钮文案是「复制交接单」',
 check('content.js：交接按钮有初始文字（曾经漏过，是空白的）',
   contentSource.includes("handoffEl.textContent = backendMode === 'custom'"))
 
+// 12) 右键菜单：必须串行创建，否则会撞 "duplicate id"
+check('background.js：右键菜单串行创建（service worker 冷启动 + onInstalled 会并发）',
+  bgSource.includes('var menuChain = Promise.resolve()') &&
+  bgSource.includes('menuChain = menuChain.then'))
+check('background.js：contextMenus.create 之后读了 lastError',
+  /contextMenus\.create\([\s\S]{0,500}?lastError/.test(bgSource))
+
 const failed = results.filter((item) => !item.ok)
 console.log(`\n合计 ${results.length} 项，失败 ${failed.length} 项`)
 process.exit(failed.length === 0 ? 0 : 1)

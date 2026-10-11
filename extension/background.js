@@ -130,16 +130,37 @@ function resolveTarget(settings, level, job) {
 
 // ---- 右键菜单 ----
 
-/** 按设置建/撤右键项。「划词即出按钮」模式下不建，免得两处都被打扰。 */
+/**
+ * 按设置建/撤右键项。「划词即出按钮」模式下不建，免得两处都被打扰。
+ *
+ * ⚠️ 必须**串行**，而且 create 之后要读 lastError。
+ * 原因：service worker 冷启动时，顶层代码会调一次，onInstalled / onStartup 又各调一次；
+ * 几次并发就会在 removeAll 与 create 之间交错，于是同一个 id 被建两遍，
+ * Chrome 便报 "Cannot create item with duplicate id"（扩展页上就是这么一条红字）。
+ */
+var menuChain = Promise.resolve()
+
 function syncContextMenu(mode) {
-  chrome.contextMenus.removeAll(function () {
-    if (mode === 'selection-button') return
-    chrome.contextMenus.create({
-      id: MENU_ID,
-      title: '用大白话解释「%s」',
-      contexts: ['selection']
+  menuChain = menuChain.then(function () {
+    return new Promise(function (resolve) {
+      chrome.contextMenus.removeAll(function () {
+        if (mode === 'selection-button') {
+          resolve()
+          return
+        }
+        chrome.contextMenus.create(
+          { id: MENU_ID, title: '用大白话解释「%s」', contexts: ['selection'] },
+          function () {
+            if (chrome.runtime.lastError) {
+              /* 极端情况下仍可能撞上；忽略即可，下一次同步会重建 */
+            }
+            resolve()
+          }
+        )
+      })
     })
   })
+  return menuChain
 }
 
 function refreshContextMenu() {
