@@ -91,6 +91,16 @@
     <div class="card hidden" id="custom-card">
       <label for="preset">常用服务（选了自动填地址与模型）</label>
       <select id="preset"></select>
+      <div class="muted">
+        标「免费」的是<b>服务商自己提供的免费层</b>——去它官网注册就能拿到 Key，不花钱。
+        <b>智谱 GLM-4.7-Flash</b> 是国内直连且长期 0 元的那个，最适合日常划词解释。
+        本机 Ollama / LM Studio 则完全免费、数据不出电脑。
+      </div>
+      <div class="muted" style="margin-top: 4px">
+        ⚠️ 免费服务的三点提醒：① <b>有限速</b>（具体数值在服务商控制台看）；②
+        <b>免费模型会换代</b>（旧版下线后请求自动路由到新版，模型名可能要改）；③
+        <b>注意隐私</b>——免费服务通常会用你的数据改进模型，<b>敏感内容请改用本机模型或自己的付费 Key</b>。
+      </div>
 
       <div class="field">
         <label for="customBaseUrl">API 地址（Base URL）</label>

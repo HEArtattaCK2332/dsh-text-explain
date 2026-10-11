@@ -14,13 +14,22 @@ var TRIGGER_MODES = ['context-menu', 'selection-button', 'both']
  */
 var PRESETS = [
   { id: '', label: '—— 选择后自动填下方两项 ——', baseUrl: '', model: '' },
-  { id: 'deepseek', label: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
-  { id: 'openai', label: 'OpenAI', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
-  { id: 'gemini', label: 'Google Gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-2.0-flash' },
-  { id: 'zhipu', label: '智谱 GLM', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4-flash' },
-  { id: 'moonshot', label: '月之暗面 Kimi', baseUrl: 'https://api.moonshot.cn/v1', model: 'moonshot-v1-8k' },
-  { id: 'ollama', label: 'Ollama（本机）', baseUrl: 'http://localhost:11434/v1', model: 'llama3.1' },
-  { id: 'lmstudio', label: 'LM Studio（本机）', baseUrl: 'http://localhost:1234/v1', model: 'local-model' }
+
+  // —— 免费优先（服务商自己提供的免费层，不花钱）——
+  // 注：这些是服务商对外的免费额度，与我们无关；别把它和「某个翻译扩展替你付钱」混为一谈，
+  //     后者只对那个扩展自己开放，第三方拿不到。
+  { id: 'zhipu-flash', label: '⭐ 智谱 GLM-4.7-Flash（免费 · 国内直连）', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4.7-flash' },
+  { id: 'qwen', label: '通义千问（每模型 100 万 token · 90 天）', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus' },
+  { id: 'gemini', label: 'Google Gemini（免费层每日重置 · 需代理）', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-2.5-flash' },
+  { id: 'groq', label: 'Groq（免费层 30 次/分 · 需代理）', baseUrl: 'https://api.groq.com/openai/v1', model: 'openai/gpt-oss-120b' },
+  { id: 'openrouter', label: 'OpenRouter（选带 :free 后缀的模型）', baseUrl: 'https://openrouter.ai/api/v1', model: 'google/gemma-4-31b-it:free' },
+  { id: 'ollama', label: 'Ollama（本机运行 · 完全免费）', baseUrl: 'http://localhost:11434/v1', model: 'llama3.1' },
+  { id: 'lmstudio', label: 'LM Studio（本机运行 · 完全免费）', baseUrl: 'http://localhost:1234/v1', model: 'local-model' },
+
+  // —— 付费（便宜、稳、额度大）——
+  { id: 'deepseek', label: 'DeepSeek（便宜）', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
+  { id: 'openai', label: 'OpenAI（付费）', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+  { id: 'moonshot', label: '月之暗面 Kimi（实名送券）', baseUrl: 'https://api.moonshot.cn/v1', model: 'moonshot-v1-8k' }
 ]
 
 var $ = function (id) { return document.getElementById(id) }
