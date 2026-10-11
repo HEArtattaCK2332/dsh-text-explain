@@ -641,6 +641,44 @@ await callSettings('POST', Object.assign({}, m12Settings.json, {
   followupEffort: 'off'
 }))
 
+// 13) turn：显式声明优先于「按消息条数猜」
+const m13Settings = await callSettings('GET')
+await callSettings('POST', Object.assign({}, m13Settings.json, {
+  explainEffort: 'high',
+  followupEffort: 'off'
+}))
+const m13Before = captured.length
+await postExplain({
+  turn: 'explain',
+  messages: [
+    { role: 'user', text: '一' },
+    { role: 'assistant', text: '答' },
+    { role: 'user', text: '二' }
+  ]
+})
+check('turn：**即便消息条数 > 1，声明 explain 就按解释的设置**（这正是点「联网搜索」的场景）',
+  captured[m13Before].reasoningEffort === 'high',
+  String(captured[m13Before].reasoningEffort))
+
+const m13Before2 = captured.length
+await postExplain({
+  turn: 'followup',
+  messages: [
+    { role: 'user', text: '一' },
+    { role: 'assistant', text: '答' },
+    { role: 'user', text: '追问' }
+  ]
+})
+check('turn：声明 followup 时按追问的设置（off）',
+  captured[m13Before2].reasoningEffort === 'off',
+  String(captured[m13Before2].reasoningEffort))
+
+// 收尾还原
+await callSettings('POST', Object.assign({}, m13Settings.json, {
+  explainEffort: 'off',
+  followupEffort: 'off'
+}))
+
 server.close()
 fs.rmSync(tempHome, { recursive: true, force: true })
 

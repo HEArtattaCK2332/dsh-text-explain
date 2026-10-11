@@ -272,6 +272,19 @@ check('问句与回答都出现在渲染树里',
   answeredView.text.includes('分布式数据同步方案的技术选型') && answeredView.text.includes('先说人话'),
   JSON.stringify(answeredView.text.slice(0, 400)))
 
+// 弹窗：重讲时折叠保留旧回答，并显式声明 turn
+const clientSourceForCollapse = fs.readFileSync(target, 'utf8')
+check('弹窗：重讲时把旧回答标成 superseded（不再是 pending.pop() 删掉重发）',
+  clientSourceForCollapse.includes('function supersedeAnswers') &&
+  !clientSourceForCollapse.includes('pending.pop()'))
+check('弹窗：被取代的回答折叠显示，可展开对照',
+  clientSourceForCollapse.includes('superseded === true') &&
+  clientSourceForCollapse.includes('上一次的回答（点开查看）'))
+check('弹窗：追问显式声明 turn=followup',
+  clientSourceForCollapse.includes("turn: 'followup'"))
+check('弹窗：请求体带上 turn',
+  clientSourceForCollapse.includes('turn: usedTurn'))
+
 const failed = results.filter((item) => !item.ok)
 console.log(`\n合计 ${results.length} 项，失败 ${failed.length} 项`)
 process.exit(failed.length === 0 ? 0 : 1)
