@@ -679,6 +679,21 @@ await callSettings('POST', Object.assign({}, m13Settings.json, {
   followupEffort: 'off'
 }))
 
+// 14) 联网通道：拦住搜索引擎结果页、缩短超时、查不到要明说
+const hostSource = fs.readFileSync(new URL('../lib/index.js', import.meta.url), 'utf8')
+check('web_fetch：拦住搜索引擎结果页（那是动态页，抓下来是空的）',
+  hostSource.includes('SEARCH_ENGINE_PAGE_PATTERNS') &&
+  hostSource.includes('bing\\.com') &&
+  hostSource.includes('要查资料请直接用 web_search'))
+check('web_fetch：超时从 15 秒收到 10 秒',
+  hostSource.includes('abort(), 10000') && !hostSource.includes('abort(), 15000'))
+check('web_search：超时从 12 秒收到 8 秒',
+  hostSource.includes('abort(), 8000') && !hostSource.includes('abort(), 12000'))
+check('工具轮数从 6 收到 4（6 轮累起来接近一分半，看着就像卡住）',
+  hostSource.includes('MAX_TOOL_ROUNDS = 4'))
+check('提示词要求：工具没查到就明说，不许默不作声退回凭记忆答',
+  hostSource.includes('我联网查了但没找到'))
+
 server.close()
 fs.rmSync(tempHome, { recursive: true, force: true })
 
