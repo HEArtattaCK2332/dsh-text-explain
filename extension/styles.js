@@ -66,7 +66,10 @@ var TextExplainStyles = `
     z-index: 2147483647;
     width: 440px;
     max-width: calc(100vw - 32px);
+    height: 560px;
     max-height: 70vh;
+    // resize 只在 overflow 非 visible 时生效；hidden 即可
+    resize: both;
     display: flex;
     flex-direction: column;
     border: 1px solid var(--te-border);
@@ -80,6 +83,8 @@ var TextExplainStyles = `
     align-items: center;
     gap: 8px;
     padding: 8px 10px;
+    cursor: move;
+    user-select: none;
     border-bottom: 1px solid var(--te-border);
     background: var(--te-bg);
     flex: 0 0 auto;

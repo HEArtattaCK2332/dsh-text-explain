@@ -174,7 +174,13 @@ check('高级区四项开关齐备（两个「默认给不给」+ 两个「显�
   expandedView.buttons.some((b) => buttonLabel(b).includes('默认开启本地查找')) &&
   expandedView.buttons.some((b) => buttonLabel(b).includes('显示「联网搜索」')) &&
   expandedView.buttons.some((b) => buttonLabel(b).includes('显示「本地搜索」')))
-check('展开态按钮数 = 12（比原来多两个「显示按钮」开关）', expandedView.buttons.length === 12, expandedView.buttons.map(buttonLabel).join(' / '))
+check('展开态出现「自定义模型参数」那把锁（默认锁着，整组灰白）',
+  expandedView.buttons.some((b) => buttonLabel(b).includes('自定义模型参数')))
+check('展开态出现模型输入与两套推理等级（解释 / 追问分开）',
+  expandedView.text.includes('解释用模型') &&
+  expandedView.text.includes('追问用模型') &&
+  expandedView.text.includes('解释的推理等级') &&
+  expandedView.text.includes('追问的推理等级'))
 check('草稿里的档位（专业）处于选中态',
   expandedView.buttons.some((b) => buttonLabel(b) === '● 专业'))
 check('草稿里关掉的「默认开启联网」显示为未选中',

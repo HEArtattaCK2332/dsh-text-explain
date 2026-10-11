@@ -47,6 +47,8 @@
   var currentLevel = 'plain'
   var triggerMode = 'context-menu'
   var pinned = false
+  // 用户拖动后的位置；为 null 时按选区自动定位（默认行为不变）
+  var userPos = null
   var conversation = [] // [{ role: 'user' | 'assistant', content }]
   var pageContext = null
   var pendingForceTool = null // 下一次请求要强制用的工具（「联网搜索」按钮设的）
@@ -229,6 +231,7 @@
   // ---- 浮窗 ----
 
   function closePanel() {
+    userPos = null // 下次重新按选区定位
     if (panelEl !== null) {
       panelEl.remove()
       panelEl = null
@@ -337,9 +340,32 @@
       event.stopPropagation()
     })
 
-    // 顶栏：档位 + 图钉 + 关闭
+    // 顶栏：档位 + 图钉 + 关闭（同时也是拖动手柄）
     var head = document.createElement('div')
     head.className = 'dsh-te-head'
+    head.addEventListener('mousedown', function (event) {
+      // 点在按钮上不算拖动，否则「点关闭」会先被拖走
+      if (event.target && event.target.tagName === 'BUTTON') return
+      if (event.button !== 0) return
+      event.preventDefault()
+      var startX = event.clientX
+      var startY = event.clientY
+      var originLeft = panelEl.offsetLeft
+      var originTop = panelEl.offsetTop
+      function onMove(moveEvent) {
+        var nextLeft = originLeft + (moveEvent.clientX - startX)
+        var nextTop = originTop + (moveEvent.clientY - startY)
+        panelEl.style.left = Math.round(nextLeft) + 'px'
+        panelEl.style.top = Math.round(nextTop) + 'px'
+        userPos = { left: nextLeft, top: nextTop }
+      }
+      function onUp() {
+        document.removeEventListener('mousemove', onMove)
+        document.removeEventListener('mouseup', onUp)
+      }
+      document.addEventListener('mousemove', onMove)
+      document.addEventListener('mouseup', onUp)
+    })
 
     var levels = document.createElement('div')
     levels.className = 'dsh-te-levels'
@@ -560,8 +586,13 @@
       : pageRect(rect)
     var width = 440
     var left = Math.min(Math.max(8, box.left), Math.max(8, window.scrollX + window.innerWidth - width - 16))
-    panelEl.style.left = Math.round(left) + 'px'
-    panelEl.style.top = Math.round(box.top + box.height + 10) + 'px'
+    if (userPos === null) {
+      panelEl.style.left = Math.round(left) + 'px'
+      panelEl.style.top = Math.round(box.top + box.height + 10) + 'px'
+    } else {
+      panelEl.style.left = Math.round(userPos.left) + 'px'
+      panelEl.style.top = Math.round(userPos.top) + 'px'
+    }
 
     renderConversation()
     ask()
