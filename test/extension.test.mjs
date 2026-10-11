@@ -206,8 +206,18 @@ check('Firefox：仓库里有生成脚本（可重复执行）',
 // 9) 「联网搜索」按钮：强制触发一次联网
 check('content.js：有「联网搜索」按钮',
   contentSource.includes('🌐 联网搜索') && contentSource.includes('forceWebSearch'))
-check('content.js：强制联网时去掉末尾回答、重发最后一问',
-  contentSource.includes("pendingForceTool = 'web'") && contentSource.includes('conversation.pop()'))
+check('content.js：强制联网时**折叠**旧回答而不是删掉（用户还能翻回去看）',
+  contentSource.includes('superseded = true') &&
+  contentSource.includes('上一次的回答（点开查看）') &&
+  !contentSource.includes('conversation.pop()'))
+check('content.js：强制联网会补一条明确指令（历史末尾仍是 user）',
+  contentSource.includes('请联网查证后补充'))
+check('content.js：这一轮是解释还是追问，由前端显式声明',
+  contentSource.includes("var pendingTurn = 'explain'") &&
+  contentSource.includes("pendingTurn = 'followup'") &&
+  contentSource.includes('turn: turnForThisRequest'))
+check('background.js：把 turn 透传给后端',
+  bgSource.includes('turn: message.turn') && bgSource.includes('dshBody.turn = job.turn'))
 check('content.js：请求带上 forceTool',
   contentSource.includes('forceTool: forceToolForThisRequest'))
 check('content.js：等联网时状态文案会变（让用户知道它在查）',

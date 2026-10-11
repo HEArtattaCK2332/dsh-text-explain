@@ -51,6 +51,7 @@
   var pageContext = null
   var pendingForceTool = null // 下一次请求要强制用的工具（「联网搜索」按钮设的）
   var backendMode = 'dsh' // 'dsh' 接本机插件；'custom' 接用户自己的 OpenAI 兼容接口
+  var pendingTurn = 'explain' // 'explain' | 'followup'：显式告诉后端这一轮是什么
   var activeRequestId = null
 
   function normalizeLevel(value) {
@@ -285,7 +286,16 @@
       if (message.role === 'user') {
         html.push('<div class="dsh-te-ask">' + TextExplainMarkdown(message.content) + '</div>')
       } else if (message.content.length > 0) {
-        html.push('<div class="dsh-te-answer">' + TextExplainMarkdown(message.content) + '</div>')
+        if (message.superseded === true) {
+          // 被新一次「联网搜索 / 换档重讲」取代的回答：折叠保留，用户还能翻回去看
+          html.push(
+            '<details class="dsh-te-ctx"><summary>📄 上一次的回答（点开查看）</summary>' +
+              '<div class="dsh-te-ctx-line">' + TextExplainMarkdown(message.content) + '</div>' +
+              '</details>'
+          )
+        } else {
+          html.push('<div class="dsh-te-answer">' + TextExplainMarkdown(message.content) + '</div>')
+        }
       }
     }
     bodyEl.innerHTML = html.join('')
@@ -421,10 +431,19 @@
      * 一段「先查证、不复述」的指令。
      */
     function forceWebSearch() {
-      while (conversation.length > 0 && conversation[conversation.length - 1].role === 'assistant') {
-        conversation.pop()
-      }
       if (conversation.length === 0) return
+      // 不删旧回答，只把它标记为「已被取代」并在界面上折叠。
+      // 这么做有两个好处：用户仍能翻回去对照；模型的历史里也留着自己上一条，
+      // 「只补充新东西、不复述」这条指令因此更容易真正执行到位。
+      for (var i = 0; i < conversation.length; i += 1) {
+        if (conversation[i].role === 'assistant') conversation[i].superseded = true
+      }
+      // 补一条明确的指令：这样历史末尾仍是 user，模型不至于收到一个「轮到你续写」的尾巴
+      conversation.push({
+        role: 'user',
+        content: '请联网查证后补充。不要复述上面已经说过的内容，只讲新查到的。'
+      })
+      pendingTurn = 'explain' // 这是「再讲一遍」，不是追问
       pendingForceTool = 'web'
       renderConversation()
       ask()
@@ -570,13 +589,16 @@
     setBusy(true)
     activeRequestId = 'req-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8)
     var forceToolForThisRequest = pendingForceTool
+    var turnForThisRequest = pendingTurn
     pendingForceTool = null
+    pendingTurn = 'explain'
     chrome.runtime.sendMessage(
       {
         type: 'text-explain/start',
         requestId: activeRequestId,
         messages: buildMessages(),
         forceTool: forceToolForThisRequest,
+        turn: turnForThisRequest,
         level: currentLevel
       },
       function (response) {
@@ -601,6 +623,7 @@
     if (question.length === 0) return
     inputEl.value = ''
     conversation.push({ role: 'user', content: question })
+    pendingTurn = 'followup'
     renderConversation()
     ask()
   }

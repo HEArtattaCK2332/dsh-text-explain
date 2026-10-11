@@ -92,6 +92,8 @@ function resolveTarget(settings, level, job) {
       stream: true
     }
     if (forceTool !== null) dshBody.forceTool = forceTool
+    // 这一轮是「解释」还是「追问」由前端声明；后端优先听它（点联网搜索属于「重讲」）
+    if (job.turn === 'explain' || job.turn === 'followup') dshBody.turn = job.turn
     return {
       url: settings.endpoint.replace(/\/+$/, '') + '/chat/completions',
       headers: { 'Content-Type': 'application/json' },
@@ -379,6 +381,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     messages: message.messages,
     text: message.text,
     forceTool: message.forceTool,
+    turn: message.turn,
     level: message.level
   })
   sendResponse({ ok: true })
