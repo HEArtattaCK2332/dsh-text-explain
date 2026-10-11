@@ -36,6 +36,12 @@
     "page": "options.html",
     "open_in_tab": true
   },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "action": {
     "default_title": "Text Explain：点此打开设置"
   }
