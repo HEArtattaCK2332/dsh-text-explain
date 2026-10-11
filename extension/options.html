@@ -58,7 +58,9 @@
       .radio { display: flex; align-items: flex-start; gap: 8px; margin: 10px 0; }
       .radio input { width: auto; margin-top: 6px; flex: 0 0 auto; }
       .radio span { flex: 1; }
-      .radio b { display: block; }
+      /* 只让每段开头的那个 <b>（标题）独占一行；
+         行内的 <b> 作强调用，必须留在句中，否则句子会被拆成好几行。 */
+      .radio > span > b:first-child { display: block; }
       details > summary { cursor: pointer; font-weight: 600; }
     </style>
   </head>
