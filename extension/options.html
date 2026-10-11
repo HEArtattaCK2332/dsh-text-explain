@@ -4,52 +4,51 @@
     <meta charset="utf-8" />
     <title>Text Explain 设置</title>
     <style>
-      :root { color-scheme: light dark; }
+      /* 显式配色，**不用** prefers-color-scheme：
+         扩展设置页所在的外壳不跟着系统走，自动配色会弄出「白卡片配深灰字」这种半深半浅的混搭，
+         蓝底白字的品牌色也救不回来，看着极费眼。这里钉死一套高对比浅色。 */
+      :root { color-scheme: light; }
       body {
         margin: 0;
         padding: 24px;
         max-width: 640px;
         font: 14px/1.7 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
           "Microsoft YaHei", sans-serif;
-        background: #fff;
+        background: #ffffff;
         color: #1f2328;
-      }
-      @media (prefers-color-scheme: dark) {
-        body { background: #1f2225; color: #e6e6e6; }
-        .card { background: #26292c; border-color: #3a3f44; }
-        input, select { background: #1f2225; color: #e6e6e6; border-color: #3a3f44; }
-        .muted { color: #9aa0a6; }
-        code { background: #2a2e33; }
       }
       h1 { font-size: 18px; margin: 0 0 16px; }
       .card {
-        border: 1px solid #e5e7eb;
+        border: 1px solid #d8dee4;
         border-radius: 10px;
         padding: 16px;
         margin-bottom: 14px;
-        background: #fafafa;
+        background: #f6f7f9;
       }
       label { display: block; font-weight: 600; margin-bottom: 6px; }
       input, select {
         box-sizing: border-box;
         padding: 8px 10px;
-        border: 1px solid #d0d7de;
+        border: 1px solid #b9c0c8;
         border-radius: 8px;
         font: inherit;
+        background: #ffffff;
+        color: #1f2328;
       }
       input[type="text"], input[type="password"], select { width: 100%; }
-      .muted { color: #6b7280; font-size: 12.5px; margin-top: 6px; }
-      code { background: #eef1f4; padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+      .muted { color: #57606a; font-size: 12.5px; margin-top: 6px; }
+      code { background: #eaeef2; color: #24292f; padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
       .row { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
       button {
         padding: 8px 14px;
-        border: 1px solid #d0d7de;
+        border: 1px solid #b9c0c8;
         border-radius: 8px;
-        background: #fff;
+        background: #ffffff;
+        color: #1f2328;
         font: inherit;
         cursor: pointer;
       }
-      button.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+      button.primary { background: #2563eb; border-color: #2563eb; color: #ffffff; }
       #result { margin-top: 10px; font-size: 13px; white-space: pre-wrap; }
       .ok { color: #15803d; }
       .bad { color: #b91c1c; }

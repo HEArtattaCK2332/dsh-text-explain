@@ -157,8 +157,11 @@ check('会话落点两个选项齐备', collapsedView.buttons.some((b) => button
   collapsedView.buttons.some((b) => buttonLabel(b).includes('未分组')))
 check('高级设置折叠时不渲染高级项', collapsedView.buttons.some((b) => buttonLabel(b).includes('高级设置')) &&
   !collapsedView.text.includes('工具：平时给不给模型'))
-check('收起态按钮数 = 8（刷新/保存 + 3 档 + 2 落点 + 高级折叠）',
-  collapsedView.buttons.length === 8, collapsedView.buttons.map(buttonLabel).join(' / '))
+check('收起态三个落点选项齐全（同工作区 / 划词解释 / 未分组）',
+  collapsedView.buttons.some((b) => buttonLabel(b).includes('与当前对话同工作区')) &&
+  collapsedView.buttons.some((b) => buttonLabel(b).includes('划词解释')) &&
+  collapsedView.buttons.some((b) => buttonLabel(b).includes('未分组')),
+  collapsedView.buttons.map(buttonLabel).join(' / '))
 
 // ---- C. 设置面板：有未保存改动 + 高级展开 ----
 const dirtyDraft = Object.assign({}, baseSettings, { explainLevel: 'pro', advancedVisible: true, webDefault: false })

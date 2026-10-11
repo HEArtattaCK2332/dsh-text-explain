@@ -236,8 +236,8 @@ check('源码里再无 localStorage / sessionStorage / indexedDB',
 check('设置层里只有一处 POST —— 就是「保存」',
   (block.match(/method: 'POST'/g) || []).length === 1,
   String((block.match(/method: 'POST'/g) || []).length))
-check('全文件的 POST 仅两处：解释请求 + 保存设置（前者不落盘）',
-  (source.match(/method: 'POST'/g) || []).length === 2,
+check('全文件的 POST 仅三处：解释请求 + 保存设置 + 准备划词解释工作区（没有别处偷偷写盘）',
+  (source.match(/method: 'POST'/g) || []).length === 3,
   String((source.match(/method: 'POST'/g) || []).length))
 check('设置端点只在设置层出现一次', (source.match(/\/api\/text-explain\/settings/g) || []).length === 1)
 check('弹窗切档不再偷偷写设置（switchLevel 里没有 saveSettings）',
