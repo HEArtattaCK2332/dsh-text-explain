@@ -49,16 +49,19 @@ var FREE_SERVICES = [
     label: '⭐ 智谱 GLM-4.7-Flash（推荐：长期 0 元 · 国内直连）',
     baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
     model: 'glm-4.7-flash',
-    applyUrl: 'https://bigmodel.cn/usercenter/apikeys',
-    note: '国内直连、不需要代理；20 万上下文。这是唯一「长期免费 + 国内可直连 + 能做对话」的组合。'
+    applyUrl: 'https://bigmodel.cn/',
+    note: '国内直连、不需要代理；20 万上下文，长期 0 元。' +
+      '申请：打开官网 → 手机号注册（需实名）→ 登录后进「控制台 / API Keys」新建一个 Key。' +
+      '注意别点进付费的 5.x 旗舰模型，免费的是 4.x 代 Flash。'
   },
   {
     id: 'qwen',
     label: '通义千问（每个模型 100 万 token · 90 天）',
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     model: 'qwen-plus',
-    applyUrl: 'https://bailian.console.aliyun.com/?apiKey=1',
-    note: '国内直连。注意是**一次性**额度（90 天），不是长期免费。'
+    applyUrl: 'https://bailian.console.aliyun.com/',
+    note: '国内直连。申请：阿里云账号登录 → 百炼控制台 → 右上角「API-KEY」新建。' +
+      '注意这是**一次性**额度（每个模型 100 万 token、90 天有效），不是长期免费。'
   },
   {
     id: 'ollama',
@@ -66,31 +69,34 @@ var FREE_SERVICES = [
     baseUrl: 'http://localhost:11434/v1',
     model: 'llama3.1',
     applyUrl: 'https://ollama.com/download',
-    note: '不用申请 Key（留空即可），但需要先在本机装好 Ollama 并拉一个模型。隐私最好。'
+    note: '不用申请 Key（这一栏留空即可）。申请：去官网下载安装，然后拉一个模型' +
+      '（如 ollama pull llama3.1）。数据不出本机。'
   },
   {
     id: 'gemini',
     label: 'Google Gemini（免费层每日重置 · 需要代理）',
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
     model: 'gemini-2.5-flash',
-    applyUrl: 'https://aistudio.google.com/apikey',
-    note: '能力较强，但国内访问需要代理。'
+    applyUrl: 'https://aistudio.google.com/',
+    note: '能力较强，但国内访问需要代理。申请：Google 账号登录 AI Studio → ' +
+      '左侧「Get API key」→ 新建。免费层每日重置。'
   },
   {
     id: 'groq',
     label: 'Groq（免费层 30 次/分 · 需要代理）',
     baseUrl: 'https://api.groq.com/openai/v1',
     model: 'openai/gpt-oss-120b',
-    applyUrl: 'https://console.groq.com/keys',
-    note: '出词极快，适合追求速度；国内访问需要代理。'
+    applyUrl: 'https://console.groq.com/',
+    note: '出词极快，适合追求速度；国内访问需要代理。申请：注册登录 → 左侧「API Keys」→ 新建。'
   },
   {
     id: 'openrouter',
     label: 'OpenRouter（选带 :free 后缀的模型 · 需要代理）',
     baseUrl: 'https://openrouter.ai/api/v1',
     model: 'google/gemma-4-31b-it:free',
-    applyUrl: 'https://openrouter.ai/keys',
-    note: '一个账号能用多家免费模型；务必确认模型名带 :free，否则会按量扣费。'
+    applyUrl: 'https://openrouter.ai/',
+    note: '一个账号能用多家免费模型；申请：登录 → 右上角头像 →「Keys」→ 新建。' +
+      '务必确认模型名带 :free，否则会按量扣费。'
   }
 ]
 
