@@ -449,33 +449,4 @@ $('free-apply').addEventListener('click', function () {
   if (url) window.open(url, '_blank', 'noopener')
 })
 
-// 「测试连接」：免费用同一套逻辑，但 Key 从免费那栏取
-$('free-test').addEventListener('click', function () {
-  var service = currentFreeService()
-  var key = freeKeyInput.value.trim()
-  freeStatusEl.className = 'muted'
-  freeStatusEl.textContent = '正在测试 ' + service.model + ' …'
-  fetch(normalizeEndpoint(service.baseUrl) + '/models', {
-    headers: key.length > 0 ? { Authorization: 'Bearer ' + key } : {}
-  })
-    .then(function (response) {
-      if (!response.ok) throw new Error('HTTP ' + response.status)
-      return response.json()
-    })
-    .then(function (data) {
-      var ids = (data && data.data ? data.data : []).map(function (item) { return item.id })
-      var hit = ids.indexOf(service.model) >= 0
-      freeStatusEl.className = 'ok'
-      freeStatusEl.textContent = hit
-        ? '通了 ✓ 而且 ' + service.model + ' 就在可用清单里'
-        : '连上了 ✓ 但清单里没看到 ' + service.model + '（可能改名了，服务商免费模型常换代——去控制台核对一下）'
-    })
-    .catch(function (error) {
-      freeStatusEl.className = 'bad'
-      freeStatusEl.textContent =
-        '连不上：' + (error && error.message ? error.message : String(error)) +
-        '（常见原因：Key 没填或填错；也可能是该服务此刻需要代理）'
-    })
-})
-
 load()
