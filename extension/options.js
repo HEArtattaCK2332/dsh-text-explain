@@ -247,8 +247,11 @@ function load() {
   $('extid').textContent = 'chrome-extension://' + chrome.runtime.id
 }
 
-$('backend-dsh').addEventListener('change', syncBackendVisibility)
-$('backend-custom').addEventListener('change', syncBackendVisibility)
+// 三个后端选项都要绑：这里用循环而不是逐个写死——
+// 之前就是漏了「免费模型」那个，导致点它时下面的卡片不出现，刷新才出。
+;['backend-dsh', 'backend-free', 'backend-custom'].forEach(function (id) {
+  $(id).addEventListener('change', syncBackendVisibility)
+})
 
 presetInput.addEventListener('change', function () {
   var picked = PRESETS.filter(function (item) { return item.id === presetInput.value })[0]
