@@ -330,53 +330,114 @@ $('save').addEventListener('click', function () {
   })
 })
 
+/** 按当前后端给出「该填什么、去哪填」的提示，而不是一律说 DSH。 */
+function backendAdvice(backend) {
+  if (backend === 'dsh') {
+    return '\n请确认 DSH 正在运行（且 dsh-text-explain 插件已启用）。'
+  }
+  if (backend === 'free') {
+    return '\n常见原因：① Key 没填或填错；② 拿错了平台的 Key（例如智谱有「清言」与「开放平台」两套，' +
+      'Key 不通用，本插件要的是开放平台那个）；③ 该账号还没完成实名。'
+  }
+  return '\n检查地址是否填到 /v1、Key 是否正确、以及该服务是否允许浏览器直连。'
+}
+
+/**
+ * 探活：真发一次最小的对话请求。
+ *
+ * 为什么不再用 /models：那个接口**不是所有服务都实现**——有的返回 401、有的 404，
+ * 于是「明明能用却报连不上」。发一次 chat 请求才是真的验证，而且顺带确认模型名对得上。
+ */
+function probeOnce(baseUrl, apiKey, model) {
+  var headers = { 'Content-Type': 'application/json' }
+  if (apiKey && apiKey.length > 0) headers.Authorization = 'Bearer ' + apiKey
+  return fetch(baseUrl.replace(/\/+$/, '') + '/chat/completions', {
+    method: 'POST',
+    headers: headers,
+    body: JSON.stringify({
+      model: model,
+      messages: [{ role: 'user', content: '请回复两个字：可以' }],
+      max_tokens: 16,
+      stream: false
+    })
+  }).then(function (response) {
+    return response.text().then(function (text) {
+      return { status: response.status, text: text }
+    })
+  })
+}
+
 $('test').addEventListener('click', function () {
+  var backend = currentBackend()
   var base = activeEndpoint()
   if (base.length === 0) {
     setResult('请先填 API 地址', 'bad')
     return
   }
   setResult('正在测试…', '')
-  var isCustom = currentBackend() === 'custom'
-  var url = isCustom ? base + '/models' : base + '/models'
+  var isDsh = backend === 'dsh'
 
   function go() {
-    fetch(url, {
-      headers: isCustom && apiKeyInput.value.trim().length > 0
-        ? { Authorization: 'Bearer ' + apiKeyInput.value.trim() }
-        : {}
-    })
-      .then(function (response) {
-        if (!response.ok) throw new Error('HTTP ' + response.status)
-        return response.json()
-      })
-      .then(function (data) {
-        var ids = (data && data.data ? data.data : []).map(function (item) { return item.id })
-        if (ids.length === 0) {
-          setResult('连上了 ✓（该服务没有返回模型清单，属正常）', 'ok')
+    if (isDsh) {
+      // DSH 那边是自家端点，取模型清单最直接
+      fetch(base + '/models')
+        .then(function (response) {
+          if (!response.ok) throw new Error('HTTP ' + response.status)
+          return response.json()
+        })
+        .then(function (data) {
+          var ids = (data && data.data ? data.data : []).map(function (item) { return item.id })
+          setResult('通了 ✓  DSH 在线，可用讲法：' + ids.slice(0, 8).join('、'), 'ok')
+        })
+        .catch(function (error) {
+          setResult('连不上：' + (error && error.message ? error.message : String(error)) + backendAdvice(backend), 'bad')
+        })
+      return
+    }
+
+    var service = backend === 'free' ? currentFreeService() : null
+    var apiKey = backend === 'free' ? freeKeyInput.value.trim() : apiKeyInput.value.trim()
+    var model = backend === 'free' ? service.model : modelInput.value.trim()
+    if (model.length === 0) {
+      setResult('请先填模型名', 'bad')
+      return
+    }
+    probeOnce(base, apiKey, model)
+      .then(function (result) {
+        if (result.status === 200) {
+          setResult('通了 ✓  ' + model + ' 已经能正常回话', 'ok')
           return
         }
-        setResult('通了 ✓  可用模型：' + ids.slice(0, 8).join('、') + (ids.length > 8 ? ' …' : ''), 'ok')
+        var hint = ''
+        if (result.status === 401 || result.status === 403) {
+          hint = '（对方不认这个 Key）'
+        } else if (result.status === 404) {
+          hint = '（地址或模型名不对）'
+        } else if (result.status === 429) {
+          hint = '（请求太频繁，撞上限速了）'
+        }
+        setResult(
+          '连不上：HTTP ' + result.status + ' ' + hint + '\n' +
+            String(result.text || '').slice(0, 200) + backendAdvice(backend),
+          'bad'
+        )
       })
       .catch(function (error) {
         setResult(
-          '连不上：' + (error && error.message ? error.message : String(error)) +
-            (isCustom
-              ? '\n检查地址是否填到 /v1、Key 是否正确、以及该服务是否允许浏览器直连。'
-              : '\n请确认 DSH 正在运行（且 dsh-text-explain 插件已启用）。'),
+          '连不上：' + (error && error.message ? error.message : String(error)) + backendAdvice(backend),
           'bad'
         )
       })
   }
 
-  if (isCustom) {
-    ensureOriginPermission(base).then(function (outcome) {
-      if (outcome.ok) go()
-      else setResult(outcome.message || '没有该域名的权限', 'bad')
-    })
+  if (backend === 'dsh') {
+    go()
     return
   }
-  go()
+  ensureOriginPermission(base).then(function (outcome) {
+    if (outcome.ok) go()
+    else setResult(outcome.message || '没有该域名的权限', 'bad')
+  })
 })
 
 fillPresets()
