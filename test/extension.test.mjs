@@ -293,12 +293,14 @@ check('设置页诚实说明：我们不代付、不中转，Key 要用户自己
   htmlSource.includes('不经手中转'))
 check('background.js：支持关流式（少数服务不支持 SSE）',
   bgSource.includes('target.stream === false'))
-check('content.js：自定义模式不建「联网搜索」按钮',
-  contentSource.includes("backendMode === 'custom' ? null : document.createElement"))
-check('content.js：自定义模式交接按钮文案是「复制交接单」',
-  contentSource.includes("backendMode === 'custom' ? '复制交接单'"))
+check('content.js：非 DSH 模式（自己的 API / 免费模型）都不建「联网搜索」按钮',
+  contentSource.includes("backendMode === 'dsh' ? document.createElement('button') : null"))
+check('content.js：只有 DSH 模式才显示「在 DSH 里继续」',
+  contentSource.includes("backendMode === 'dsh' ? '在 DSH 里继续' : '复制交接单'"))
 check('content.js：交接按钮有初始文字（曾经漏过，是空白的）',
-  contentSource.includes("handoffEl.textContent = backendMode === 'custom'"))
+  contentSource.includes('handoffEl.textContent = backendMode ==='))
+check('content.js：读完设置后会认「免费模型」这种后端',
+  contentSource.includes("stored.backend === 'custom' || stored.backend === 'free'"))
 
 // 12) 右键菜单：必须串行创建，否则会撞 "duplicate id"
 check('background.js：右键菜单串行创建（service worker 冷启动 + onInstalled 会并发）',

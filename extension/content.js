@@ -483,7 +483,8 @@
 
     // 自带 API 模式下没有联网工具（那是 DSH 的能力），索性不显示这个按钮，
     // 而不是摆一个点了没用的东西。
-    var webEl = backendMode === 'custom' ? null : document.createElement('button')
+    // 联网是 DSH 提供的能力；「自己的 API」与「免费模型」都没有，所以不建这个按钮
+    var webEl = backendMode === 'dsh' ? document.createElement('button') : null
     if (webEl !== null) {
       webEl.className = 'dsh-te-handoff'
       webEl.type = 'button'
@@ -501,7 +502,7 @@
     handoffEl.className = 'dsh-te-handoff'
     handoffEl.type = 'button'
     // 初始文案（之前漏了，按钮在浮窗底部是空白的）
-    handoffEl.textContent = backendMode === 'custom' ? '复制交接单' : '在 DSH 里继续'
+    handoffEl.textContent = backendMode === 'dsh' ? '在 DSH 里继续' : '复制交接单'
     handoffEl.addEventListener('click', function (event) {
       event.preventDefault()
       event.stopPropagation()
@@ -531,7 +532,7 @@
 
       chrome.storage.local.get({ handoffMode: 'session' }, function (stored) {
         // 自带 API 模式没有 DSH 可开新会话，只能复制交接单
-        if (backendMode === 'custom' || stored.handoffMode === 'clipboard') {
+        if (backendMode !== 'dsh' || stored.handoffMode === 'clipboard') {
           if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(document_).then(function () {
               handoffEl.textContent = '已复制 ✓ 粘进 DSH 新会话即可'
@@ -719,7 +720,8 @@
   chrome.storage.local.get(
     { level: 'plain', triggerMode: 'context-menu', backend: 'dsh' },
     function (stored) {
-      backendMode = stored.backend === 'custom' ? 'custom' : 'dsh'
+      backendMode =
+        stored.backend === 'custom' || stored.backend === 'free' ? stored.backend : 'dsh'
       currentLevel = normalizeLevel(stored.level)
     triggerMode =
       stored.triggerMode === 'selection-button' || stored.triggerMode === 'both'
@@ -730,7 +732,8 @@
   chrome.storage.onChanged.addListener(function (changes, area) {
     if (area !== 'local') return
     if (changes.backend) {
-      backendMode = changes.backend.newValue === 'custom' ? 'custom' : 'dsh'
+      var next = changes.backend.newValue
+      backendMode = next === 'custom' || next === 'free' ? next : 'dsh'
     }
     if (changes.triggerMode) {
       triggerMode =
