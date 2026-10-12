@@ -28,7 +28,9 @@ function readSettings() {
       customApiKey: '',
       customModel: '',
       customSystemMerged: false,
-      customNoStream: false
+      customNoStream: false,
+      freeServiceId: 'zhipu-flash',
+      freeApiKey: ''
     })
     .then(function (stored) {
       return {
@@ -40,12 +42,15 @@ function readSettings() {
         triggerMode:
           TRIGGER_MODES.indexOf(stored.triggerMode) >= 0 ? stored.triggerMode : 'context-menu',
         // 「dsh」＝接本机 DSH 插件；「custom」＝接用户自己的 OpenAI 兼容接口
-        backend: stored.backend === 'custom' ? 'custom' : 'dsh',
+        // dsh（本机）/ custom（自己的 API）/ free（服务商的免费层，地址与模型名在设置里已配好）
+        backend: stored.backend === 'custom' || stored.backend === 'free' ? stored.backend : 'dsh',
         customBaseUrl: typeof stored.customBaseUrl === 'string' ? stored.customBaseUrl.trim() : '',
         customApiKey: typeof stored.customApiKey === 'string' ? stored.customApiKey.trim() : '',
         customModel: typeof stored.customModel === 'string' ? stored.customModel.trim() : '',
         customSystemMerged: stored.customSystemMerged === true,
-        customNoStream: stored.customNoStream === true
+        customNoStream: stored.customNoStream === true,
+        freeServiceId: typeof stored.freeServiceId === 'string' ? stored.freeServiceId : 'zhipu-flash',
+        freeApiKey: typeof stored.freeApiKey === 'string' ? stored.freeApiKey : ''
       }
     })
 }
@@ -84,7 +89,9 @@ function resolveTarget(settings, level, job) {
     ? job.messages.slice()
     : [{ role: 'user', content: String(job.text || '') }]
 
-  if (settings.backend !== 'custom') {
+  // 免费模式与「自己的 API」走同一套拼装：设置里已把地址与模型名落进 custom* 字段。
+  // 唯一的区别是没有联网工具（那不是第三方接口的能力），所以不发 forceTool。
+  if (settings.backend === 'custom' || settings.backend === 'free') {
     var forceTool = job.forceTool === 'web' || job.forceTool === 'file' ? job.forceTool : null
     var dshBody = {
       model: 'text-explain-' + level,
@@ -116,7 +123,11 @@ function resolveTarget(settings, level, job) {
   }
 
   var headers = { 'Content-Type': 'application/json' }
-  if (settings.customApiKey.length > 0) headers.Authorization = 'Bearer ' + settings.customApiKey
+  // 免费模式优先用 freeApiKey（设置页那一栏），否则回落到 customApiKey
+  var apiKey = settings.backend === 'free' && settings.freeApiKey
+    ? settings.freeApiKey
+    : settings.customApiKey
+  if (apiKey && apiKey.length > 0) headers.Authorization = 'Bearer ' + apiKey
 
   return {
     url: base + '/chat/completions',

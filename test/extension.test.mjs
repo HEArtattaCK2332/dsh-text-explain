@@ -260,15 +260,37 @@ check('options.js：预设含各家服务与本机模型',
 check('background.js：自定义模式走用户自己的地址、模型与 Key',
   bgSource.includes('customBaseUrl') &&
   bgSource.includes('customModel') &&
-  bgSource.includes("'Bearer ' + settings.customApiKey"))
+  bgSource.includes("'Bearer ' + apiKey"))
+check('background.js：免费模式与「自己的 API」共用一套拼装（设置里已把地址模型落进 custom*）',
+  bgSource.includes("settings.backend === 'custom' || settings.backend === 'free'"))
+check('background.js：免费模式优先用 freeApiKey',
+  bgSource.includes("settings.backend === 'free' && settings.freeApiKey"))
+check('background.js：免费模式不发 forceTool（联网不是第三方接口的能力）',
+  bgSource.includes("if (settings.backend === 'custom' || settings.backend === 'free') {") &&
+  !/backend !== 'custom'/.test(bgSource))
 check('background.js：自带内置三档讲法（自定义模式用）',
   bgSource.includes('LEVEL_PROMPTS') &&
   bgSource.includes('plain:') &&
   bgSource.includes('general:') &&
   bgSource.includes('pro:') &&
   bgSource.includes('把读者当成同行'))
-check('background.js：只有 DSH 模式才发 forceTool（联网是 DSH 的能力）',
-  bgSource.includes("if (settings.backend !== 'custom')"))
+check('设置页：后端是三选一（DSH / 免费模型 / 自己的 API）',
+  htmlSource.includes('id="backend-dsh"') &&
+  htmlSource.includes('id="backend-free"') &&
+  htmlSource.includes('id="backend-custom"'))
+check('设置页：免费模式有服务下拉、Key 输入与申请按钮',
+  htmlSource.includes('id="free-pick"') &&
+  htmlSource.includes('id="free-key"') &&
+  htmlSource.includes('id="free-apply"'))
+check('免费服务表：智谱 Flash 排第一且标明免费',
+  optionsSource.includes("id: 'zhipu-flash'") &&
+  optionsSource.includes('glm-4.7-flash') &&
+  optionsSource.includes('免费'))
+check('免费服务表：至少覆盖 5 家（含本机 Ollama）',
+  (optionsSource.match(/id: '(zhipu-flash|qwen|ollama|gemini|groq|openrouter)'/g) || []).length >= 5)
+check('设置页诚实说明：我们不代付、不中转，Key 要用户自己申请',
+  htmlSource.includes('我们不经手中转、也不代你付费') ||
+  htmlSource.includes('不经手中转'))
 check('background.js：支持关流式（少数服务不支持 SSE）',
   bgSource.includes('target.stream === false'))
 check('content.js：自定义模式不建「联网搜索」按钮',

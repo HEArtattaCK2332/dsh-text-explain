@@ -33,7 +33,82 @@ var PRESETS = [
 ]
 
 var $ = function (id) { return document.getElementById(id) }
+
+/**
+ * 「免费模型」模式下可选的免费服务。
+ *
+ * 只收**服务商自己对外提供的免费层**（注册就能拿 Key）。
+ * 注意区分：某些翻译扩展的「免费」是它自己买额度搭中转，那只对它自己开放，我们拿不到——
+ * 所以我们这里**不代付、不中转**，只把地址与模型名配好，Key 由用户自己申请。
+ *
+ * 数据来源：free-llm-intel（每日对照官方页自动更新）2026-10-11 快照。
+ */
+var FREE_SERVICES = [
+  {
+    id: 'zhipu-flash',
+    label: '⭐ 智谱 GLM-4.7-Flash（推荐：长期 0 元 · 国内直连）',
+    baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+    model: 'glm-4.7-flash',
+    applyUrl: 'https://bigmodel.cn/usercenter/apikeys',
+    note: '国内直连、不需要代理；20 万上下文。这是唯一「长期免费 + 国内可直连 + 能做对话」的组合。'
+  },
+  {
+    id: 'qwen',
+    label: '通义千问（每个模型 100 万 token · 90 天）',
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    model: 'qwen-plus',
+    applyUrl: 'https://bailian.console.aliyun.com/?apiKey=1',
+    note: '国内直连。注意是**一次性**额度（90 天），不是长期免费。'
+  },
+  {
+    id: 'ollama',
+    label: 'Ollama（跑在自己电脑上 · 完全免费 · 数据不出本机）',
+    baseUrl: 'http://localhost:11434/v1',
+    model: 'llama3.1',
+    applyUrl: 'https://ollama.com/download',
+    note: '不用申请 Key（留空即可），但需要先在本机装好 Ollama 并拉一个模型。隐私最好。'
+  },
+  {
+    id: 'gemini',
+    label: 'Google Gemini（免费层每日重置 · 需要代理）',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+    model: 'gemini-2.5-flash',
+    applyUrl: 'https://aistudio.google.com/apikey',
+    note: '能力较强，但国内访问需要代理。'
+  },
+  {
+    id: 'groq',
+    label: 'Groq（免费层 30 次/分 · 需要代理）',
+    baseUrl: 'https://api.groq.com/openai/v1',
+    model: 'openai/gpt-oss-120b',
+    applyUrl: 'https://console.groq.com/keys',
+    note: '出词极快，适合追求速度；国内访问需要代理。'
+  },
+  {
+    id: 'openrouter',
+    label: 'OpenRouter（选带 :free 后缀的模型 · 需要代理）',
+    baseUrl: 'https://openrouter.ai/api/v1',
+    model: 'google/gemma-4-31b-it:free',
+    applyUrl: 'https://openrouter.ai/keys',
+    note: '一个账号能用多家免费模型；务必确认模型名带 :free，否则会按量扣费。'
+  }
+]
+
+function findFreeService(id) {
+  for (var i = 0; i < FREE_SERVICES.length; i += 1) {
+    if (FREE_SERVICES[i].id === id) return FREE_SERVICES[i]
+  }
+  return FREE_SERVICES[0]
+}
+
+function currentFreeService() {
+  return findFreeService(freePickInput ? freePickInput.value : FREE_SERVICES[0].id)
+}
 var presetInput = $('preset')
+var freePickInput = $('free-pick')
+var freeKeyInput = $('free-key')
+var freeNoteEl = $('free-note')
+var freeStatusEl = $('free-status')
 var baseUrlInput = $('customBaseUrl')
 var modelInput = $('customModel')
 var apiKeyInput = $('customApiKey')
@@ -53,18 +128,22 @@ function normalizeEndpoint(value) {
 }
 
 function currentBackend() {
+  if ($('backend-free').checked) return 'free'
   return $('backend-custom').checked ? 'custom' : 'dsh'
 }
 
 /** 按当前模式决定要去连哪个地址（「测试连接」用）。 */
 function activeEndpoint() {
-  if (currentBackend() === 'custom') return normalizeEndpoint(baseUrlInput.value)
+  var backend = currentBackend()
+  if (backend === 'custom') return normalizeEndpoint(baseUrlInput.value)
+  if (backend === 'free') return normalizeEndpoint(currentFreeService().baseUrl)
   return DSH_ENDPOINT
 }
 
 function syncBackendVisibility() {
-  var isCustom = currentBackend() === 'custom'
-  $('custom-card').className = isCustom ? 'card' : 'card hidden'
+  var backend = currentBackend()
+  $('custom-card').className = backend === 'custom' ? 'card' : 'card hidden'
+  $('free-card').className = backend === 'free' ? 'card' : 'card hidden'
 }
 
 /**
@@ -96,6 +175,24 @@ function ensureOriginPermission(baseUrl) {
       })
     })
   })
+}
+
+/** 把免费服务填进下拉，并把当前选中的那个反映到提示与按钮上。 */
+function syncFreePick() {
+  var service = currentFreeService()
+  if (freeNoteEl) freeNoteEl.textContent = service.note
+  if (freePickInput) freePickInput.setAttribute('data-apply-url', service.applyUrl)
+}
+
+function fillFreeServices() {
+  FREE_SERVICES.forEach(function (service) {
+    var option = document.createElement('option')
+    option.value = service.id
+    option.textContent = service.label
+    freePickInput.appendChild(option)
+  })
+  freePickInput.addEventListener('change', syncFreePick)
+  syncFreePick()
 }
 
 function fillPresets() {
@@ -133,6 +230,10 @@ function load() {
       triggerInput.value =
         TRIGGER_MODES.indexOf(stored.triggerMode) >= 0 ? stored.triggerMode : 'context-menu'
       handoffInput.value = stored.handoffMode === 'clipboard' ? 'clipboard' : 'session'
+      $('backend-free').checked = stored.backend === 'free'
+      if (stored.freeServiceId) freePickInput.value = stored.freeServiceId
+      freeKeyInput.value = stored.freeApiKey || ''
+      syncFreePick()
       syncBackendVisibility()
     }
   )
@@ -172,6 +273,32 @@ $('save').addEventListener('click', function () {
         setResult('已保存 ✓', 'ok')
       }
     )
+  }
+
+  if (backend === 'free') {
+    var freeService = currentFreeService()
+    // 免费服务里只有本机 Ollama 不需要 Key，其余都要——但 Key 是否填对，
+    // 交给「测试连接」去判，不在保存时拦人（有人可能先存设置再去申请）。
+    chrome.storage.local.set(
+      {
+        endpoint: DSH_ENDPOINT,
+        backend: 'free',
+        freeServiceId: freeService.id,
+        freeApiKey: freeKeyInput.value.trim(),
+        // 同时把地址与模型名落到 custom* 字段：内容脚本与后台读它们即可，
+        // 不必为免费模式再加一套取值分支。
+        customBaseUrl: freeService.baseUrl,
+        customModel: freeService.model,
+        level: LEVELS.indexOf(levelInput.value) >= 0 ? levelInput.value : 'plain',
+        triggerMode:
+          TRIGGER_MODES.indexOf(triggerInput.value) >= 0 ? triggerInput.value : 'context-menu',
+        handoffMode: handoffInput.value === 'clipboard' ? 'clipboard' : 'session'
+      },
+      function () {
+        setResult('已保存 ✓ 现在按「测试连接」看看通不通', 'ok')
+      }
+    )
+    return
   }
 
   if (backend !== 'custom') {
@@ -246,4 +373,41 @@ $('test').addEventListener('click', function () {
 })
 
 fillPresets()
+fillFreeServices()
+
+// 「去申请免费 Key →」：直接打开对应服务商的申请页
+$('free-apply').addEventListener('click', function () {
+  var url = currentFreeService().applyUrl
+  if (url) window.open(url, '_blank', 'noopener')
+})
+
+// 「测试连接」：免费用同一套逻辑，但 Key 从免费那栏取
+$('free-test').addEventListener('click', function () {
+  var service = currentFreeService()
+  var key = freeKeyInput.value.trim()
+  freeStatusEl.className = 'muted'
+  freeStatusEl.textContent = '正在测试 ' + service.model + ' …'
+  fetch(normalizeEndpoint(service.baseUrl) + '/models', {
+    headers: key.length > 0 ? { Authorization: 'Bearer ' + key } : {}
+  })
+    .then(function (response) {
+      if (!response.ok) throw new Error('HTTP ' + response.status)
+      return response.json()
+    })
+    .then(function (data) {
+      var ids = (data && data.data ? data.data : []).map(function (item) { return item.id })
+      var hit = ids.indexOf(service.model) >= 0
+      freeStatusEl.className = 'ok'
+      freeStatusEl.textContent = hit
+        ? '通了 ✓ 而且 ' + service.model + ' 就在可用清单里'
+        : '连上了 ✓ 但清单里没看到 ' + service.model + '（可能改名了，服务商免费模型常换代——去控制台核对一下）'
+    })
+    .catch(function (error) {
+      freeStatusEl.className = 'bad'
+      freeStatusEl.textContent =
+        '连不上：' + (error && error.message ? error.message : String(error)) +
+        '（常见原因：Key 没填或填错；也可能是该服务此刻需要代理）'
+    })
+})
+
 load()

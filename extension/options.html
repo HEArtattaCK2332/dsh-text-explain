@@ -80,6 +80,16 @@
       </div>
 
       <div class="radio">
+        <input type="radio" name="backend" id="backend-free" value="free" />
+        <span>
+          <b>免费模型</b>
+          用别人提供的<b>免费额度</b>——地址与模型名会<b>自动配好</b>，你只要去服务商官网
+          <b>申请一个免费的 Key</b>（点下面按钮直达），其余不用管。
+          <b>我们不经手中转、也不代你付费</b>，所以这一步省不掉。
+        </span>
+      </div>
+
+      <div class="radio">
         <input type="radio" name="backend" id="backend-custom" value="custom" />
         <span>
           <b>我自己的 API</b>
@@ -88,6 +98,38 @@
           交接改为复制一份 Markdown。
         </span>
       </div>
+    </div>
+
+    <!-- 免费模型：只让用户挑服务 + 填 Key，地址与模型名自动填 -->
+    <div class="card hidden" id="free-card">
+      <label for="free-pick">选一个免费服务</label>
+      <select id="free-pick"></select>
+      <div class="muted" id="free-note"></div>
+
+      <div class="field">
+        <label for="free-key">API Key（只有这一项要你填）</label>
+        <input id="free-key" type="password" spellcheck="false" autocomplete="off" />
+        <div class="muted">
+          去服务商官网免费申请，粘到这里即可。地址与模型名已自动配好，不用管。
+        </div>
+        <div class="row" style="margin-top: 8px">
+          <button id="free-apply" type="button">去申请免费 Key →</button>
+          <button id="free-test" type="button">测试连接</button>
+        </div>
+        <div class="muted" id="free-status"></div>
+      </div>
+
+      <details style="margin-top: 14px">
+        <summary>探一下底：免费的代价</summary>
+        <div class="muted" style="margin-top: 8px">
+          <b>① 有限速</b>：具体数值各服务不同，要去它的控制台看；频繁使用可能被挡。<br>
+          <b>② 会换代</b>：免费模型下线后，请求会被自动路由到新版，模型名可能要改。<br>
+          <b>③ 注意隐私</b>⚠️：<b>免费服务通常会用你的数据改进模型</b>。
+          涉及工作机密、个人隐私、未发布内容的片段，<b>请改用本机模型（Ollama）或自己的付费 Key</b>。<br>
+          <b>④ 能力有差</b>：免费模型解释「小白 / 通识」两档足够；
+          「专业」档那种深水区，和顶级付费模型能看出差距。
+        </div>
+      </details>
     </div>
 
     <div class="card hidden" id="custom-card">
