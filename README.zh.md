@@ -74,6 +74,16 @@ dsh plugin --profile web add file:<dsh-text-explain 的路径>
 同一套后端也养着一个浏览器扩展：在任意网页上划中一段话，浮窗里给解释（三档讲法，可当场切换）。
 源码在 [`extension/`](extension/)，另有一份 [说明](extension/README.md)。
 
+**不装 DSH 也能用**——扩展提供**三种后端**：
+
+- **免费模型**（最省事）：地址与模型名都替你配好了，你只要去服务商官网**申请一个免费 Key**。
+  推荐 ⭐**智谱 GLM-4.7-Flash**（长期 0 元、**国内直连**）；也可选通义千问、Gemini、Groq、
+  OpenRouter，或本机的 Ollama / LM Studio。
+- **本机 DeepSeek Harness**：连这个插件，**联网搜索**与「**交接新会话**」都能用。
+- **你自己的 API**：任意 OpenAI 兼容接口。
+
+三种模式下**三档讲法都一样**（小白 / 通识 / 专业）。
+
 装法（未打包加载）：打开 `chrome://extensions/` → 开启右上角**开发者模式** → 点**加载已解压的扩展程序** → 选 `extension/` 目录。
 
 ## 给别的应用用（对外 API）

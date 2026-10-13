@@ -93,6 +93,18 @@ page and read the explanation in a floating panel (three depths, switchable on
 the spot). Source lives in [`extension/`](extension/) with its own
 [README](extension/README.md).
 
+**You do not need DSH to use it.** The extension offers three backends:
+
+- **Free models** (easiest) — endpoints and model names are pre-filled; all you do
+  is apply for a free key at the provider. Recommended: Zhipu GLM-4.7-Flash, free
+  and reachable from mainland China without a proxy. Also Qwen, Gemini, Groq,
+  OpenRouter, or a local Ollama / LM Studio.
+- **Local DeepSeek Harness** — talks to this plugin, so web search and
+  hand-off-to-a-new-session work as well.
+- **Your own API** — any OpenAI-compatible endpoint.
+
+The three depth levels work identically in all three.
+
 Load it unpacked: open `chrome://extensions/`, turn on **Developer mode**, click
 **Load unpacked**, and pick the `extension/` folder.
 
