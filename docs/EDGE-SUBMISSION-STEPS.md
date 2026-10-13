@@ -5,13 +5,30 @@
 
 ---
 
+## ⚠️ 第 0 步（前置条件）：账户验证必须已通过
+
+**没通过验证，后台会拦住「发布」按钮**，报：
+
+> 无法发布扩展。你的开发人员帐户验证处于挂起状态或被拒绝。
+
+查验证状态：<https://partner.microsoft.com/dashboard/account/v3/organization/legalinfo#developer>
+→ 点「**验证摘要**」。三项（电子邮件验证 / 工作证明 / 企业验证）各有状态；
+显示 `In Progress` 即审核中，只能等（个人账户通常几天）。
+
+> 实战（2026-10-12）：草稿全部填妥、安装包也验证通过，唯独卡在这一关。
+> 好消息是——**验证期间可以先把草稿建好、包传完、表单填满**；等它一变绿，回来点「发布」即可。
+
+---
+
 ## 准备（都已就绪）
 
 | 要用的东西 | 位置 |
 | --- | --- |
 | 安装包（上传用） | `E:\DSH-cj\dsh-text-explain\dist\text-explain-chrome.zip` |
 | 版本号 | **0.4.0**（与包内一致） |
-| 截图 | 您已拍好（至少 1 张，1280×800 或 640×400） |
+| 截图 | 桌面 `tex.png`（解释效果，主图）＋ `907775ab-85de-47c8-9859-c107e26f1998.png`（设置页），均 **1280×800 PNG** |
+| 包内清单 | 已删去 `key` 字段（Edge 明文不收，留着必上传失败） |
+| 发布者显示名称 | **摸摸咸鱼**（注册时已定，非 `HEArtattaCK2332`） |
 
 ---
 
@@ -197,3 +214,78 @@ Edge 会要求解释每条权限的用途。逐条粘贴：
 | 上传后报错 | 确认用的是 `text-explain-chrome.zip`（**不是** firefox 那份） |
 | 提示版本冲突 | 在后台把旧的草稿删掉，或把 `extension/manifest.json` 的版本号 +0.0.1 后重新打包 |
 | 卡在某个字段不知道怎么填 | 把那个字段的**提示原文**发我，我给出该填什么 |
+
+---
+
+## 附：实战踩坑记录（2026-10-12 首次提交）
+
+按实际绊住人的顺序记下。下次照此避雷。
+
+### 1. 清单里有 `key` 字段 → 上传直接被拒
+
+```
+程序包验证失败: 该清单不应包含 key 字段。 Line: 0 Column: 0
+```
+
+`key` 是 Chrome 用来固定扩展 ID 的公钥，**Edge 商店不收**。上传前从 `manifest.json` 删掉。
+> 副作用：去掉后扩展 ID 会变，本机已装开发版的设置（API Key 等）可能需重填。
+> 原清单（含 key）已备份到 `docs/manifest.with-key.bak.json`。
+
+### 2. 打包务必用「白名单」，**不可**整目录压缩
+
+`extension/` 目录里混着开发文件，一律**不能进包**：
+
+- `extension-key.txt`（**含密钥**）
+- `build-firefox-manifest.cjs`
+- `manifest.firefox.json`
+- `README.md`、`STORE-SUBMISSION.md`
+
+正确做法：只挑运行时文件（`manifest.json`、`background.js`、`content.js`、`markdown.js`、`styles.js`、`options.html`、`options.js`、`icons/`）另存到中转目录再压缩。
+> 实测：整目录压缩得 45 KB（裹进 5 个开发文件）；白名单打包得 33 KB、11 个条目。
+
+### 3. 账户验证是硬门槛
+
+见文首「第 0 步」。草稿能建、包能传、表单能填，唯「发布」被拦——**不是操作问题**。
+
+### 4. 语言只有「英语(美国)」，且「添加语言」是灰的
+
+包内没有 `default_locale` 与 `_locales/`，Edge 把语言识别为 `en-US`，且不给添加别的语言。
+不影响上架。若想让商店页归入中文语区，需给包加 `_locales/zh_CN/messages.json`，并把 manifest 的 `name` / `description` 改成 `__MSG_xxx__` 占位符后重新上传。
+
+### 5. `content_scripts` 匹配 `<all_urls>` 的理由要自己找地方写
+
+后台「隐私」页只让为 `storage`、`contextMenus` 与主机权限逐条写理由，**`<all_urls>` 注入没有单独的位置**——建议并入「主机权限理由」一并说明（本次已写）。
+
+### 6. 「认证说明」别漏，这是过审的关键一栏
+
+提交页最后的「认证说明（Notes for certification）」。审核员机器上没有本机 DSH 服务，不说清容易被判「功能不可用」。建议照抄：
+
+> 本扩展默认连接本机 `127.0.0.1:3080` 的 DeepSeek Harness 服务。审核时若本机无此服务，请点击浏览器工具栏的扩展图标进入设置页，将后端切换为「我自己的 API」，填入任意 OpenAI 兼容接口地址与 Key（如 `https://api.deepseek.com/v1`）即可完整测试：在任意网页选中文字 → 右键 →「用大白话解释」。扩展不需要登录、不收集数据，所有设置仅存本机。
+
+### 7. 截图：一个图位一次只能传一张，重复上传是「追加」
+
+「屏幕截图」的文件框不是多选框，一次一张；同一图位再次上传会**追加**（最多 6 张）。
+尺寸必须 **1280×800** 或 **640×400**（PNG/JPEG）。
+
+### 8. Partner Center 的两处「唬人」路径
+
+- `/dashboard/microsoftedge` 有时渲染成**通用主页**（「我的访问权限」空着、没有 Edge 卡片）——不代表没注册，直接进 `/dashboard/microsoftedge/overview` 反而能看到后台。
+- 点「入门 / Get started」若跳到 `enrollnow/error/msedgeaddons/AlreadyEnrolled`，那是**已注册**的提示，不是报错；照它说的去「帐户设置」即可。
+
+### 9. 反爬会拦「无头浏览器」
+
+Partner Center 走 Akamai 防护，`HeadlessChrome` 一律回 `Access Denied`（连站点根域都拦）。
+若要用程序代劳，须以**正常启动的浏览器**（可加 `--remote-debugging-port`）接管，UA 正常即可通行。
+
+### 10. 本次提交的实际进度（截至 2026-10-12）
+
+| 环节 | 状态 |
+| --- | --- |
+| 安装包 | ✅ 已验证（0.4.0） |
+| 可用性 / 属性 / 隐私 / Store 一览 | ✅ 均「步骤已完成」 |
+| 截图 | ✅ 两张（解释效果 + 设置页） |
+| **账户验证** | ⏸️ **In Progress，等待微软审核** |
+| 发布 | ⛔ 待验证通过后回来点 |
+
+> 草稿地址（扩展 ID `37b80e31-3da4-45fe-bfcb-d07f4bb3f4b5`）：
+> <https://partner.microsoft.com/zh-cn/dashboard/microsoftedge/37b80e31-3da4-45fe-bfcb-d07f4bb3f4b5/overview>

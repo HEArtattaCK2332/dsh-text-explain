@@ -28,7 +28,19 @@ firefox.background = { scripts: ['background.js'] }
 firefox.browser_specific_settings = {
   gecko: {
     id: 'text-explain@heartattack2332.github.io',
-    strict_min_version: '115.0'
+    strict_min_version: '115.0',
+    // ⚠️ AMO 自 2025-11-03 起强制要求声明「数据收集与传输」，缺了它上传会被直接拒绝：
+    //    The "data_collection_permissions" property is missing.
+    //
+    // 为什么声明 websiteContent 而不是 none：
+    //   本扩展**不向开发者或任何第三方收集数据**（我们没有服务器）；
+    //   但用户点「解释」时，**选中的网页文字**会发到**他自己配置的后端**
+    //   （本机 DeepSeek Harness，或他填的 OpenAI 兼容接口）。
+    //   按 Mozilla 的定义，这属于「传输到扩展之外交由外部处理」，故如实声明。
+    //   宁可多声明，不可漏声明——漏声明是违规，多声明只是啰嗦。
+    data_collection_permissions: {
+      required: ['websiteContent']
+    }
   }
 }
 
