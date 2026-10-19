@@ -125,7 +125,7 @@ function check(name, ok, detail) {
 
 // 1) 三档各来一次，看系统提示词与 maxTokens
 const cases = [
-  { level: 'plain', must: '完全不懂 AI', tokens: 1024 },
+  { level: 'plain', must: '没接触过这方面知识', tokens: 1024 },
   { level: 'general', must: '会用电脑、有常识', tokens: 1024 },
   { level: 'pro', must: '同行', tokens: 1400 }
 ]
@@ -144,12 +144,12 @@ for (const item of cases) {
 const beforeDefault = captured.length
 await call({ text: '不传档位', enableWeb: false, enableFile: false })
 const noLevel = captured[beforeDefault]
-check('不传 level 回落默认档', Boolean(noLevel && noLevel.system.includes('完全不懂 AI')))
+check('不传 level 回落默认档', Boolean(noLevel && noLevel.system.includes('没接触过这方面知识')))
 
 const beforeBogus = captured.length
 await call({ text: '非法档位', level: 'ultra-mega', enableWeb: false, enableFile: false })
 const bogus = captured[beforeBogus]
-check('非法 level 回落默认档', Boolean(bogus && bogus.system.includes('完全不懂 AI')))
+check('非法 level 回落默认档', Boolean(bogus && bogus.system.includes('没接触过这方面知识')))
 
 // 3) 工具开关仍生效（工具提示词只在开启时附上）
 const beforeTools = captured.length
@@ -369,7 +369,7 @@ await callOpenAi('/api/text-explain/v1/chat/completions', {
   messages: [{ role: 'user', content: '讲讲' }]
 })
 check('对外 API：认不出的 model 回落默认档（不报错）',
-  Boolean(captured[beforeUnknownModel] && captured[beforeUnknownModel].system.includes('完全不懂 AI')))
+  Boolean(captured[beforeUnknownModel] && captured[beforeUnknownModel].system.includes('没接触过这方面知识')))
 
 const beforeSystem = captured.length
 await callOpenAi('/api/text-explain/v1/chat/completions', {
@@ -693,6 +693,21 @@ check('工具轮数从 6 收到 4（6 轮累起来接近一分半，看着就像
   hostSource.includes('MAX_TOOL_ROUNDS = 4'))
 check('提示词要求：工具没查到就明说，不许默不作声退回凭记忆答',
   hostSource.includes('我联网查了但没找到'))
+
+// 15) 三档讲法的文案：不限代码
+const hostSrc = fs.readFileSync(new URL('../lib/index.js', import.meta.url), 'utf8')
+const clientSrc = fs.readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8')
+const optionsHtml = fs.readFileSync(new URL('../extension/options.html', import.meta.url), 'utf8')
+
+check('讲法文案不把读者当程序员（不再出现「不懂代码」「同行工程师」）',
+  !hostSrc.includes('不懂代码') &&
+  !clientSrc.includes('不懂代码') &&
+  !clientSrc.includes('同行工程师') &&
+  !optionsHtml.includes('不懂代码'),
+  [hostSrc, clientSrc, optionsHtml].some((text) => /不懂代码|同行工程师/.test(text)) ? '仍有残留' : '干净')
+
+check('小白档的提示词点明了「不一定是技术」（医学、法律、生活事务都算）',
+  hostSrc.includes('不一定是技术') && clientSrc.includes('没接触过这方面知识'))
 
 server.close()
 fs.rmSync(tempHome, { recursive: true, force: true })

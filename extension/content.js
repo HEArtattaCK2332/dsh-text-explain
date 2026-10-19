@@ -56,6 +56,14 @@
   var pendingTurn = 'explain' // 'explain' | 'followup'：显式告诉后端这一轮是什么
   var activeRequestId = null
 
+  // 「解锁划词」：有的网站明文禁止选中文字（怕被复制），于是划不动、右键菜单也不出现
+  // ——「看不懂就问不了」。这一段就是掀掉那层封印。
+  // 默认开着（装上就能用是底线），但**可关**：掀开之后，地图、拖拽排序这类界面
+  // 可能多出「选中蓝」。设置页「高级设置」里能关掉它。
+  var UNLOCK_STYLE_ID = 'dsh-text-explain-unlock'
+  var unlockEnabled = true
+  var unlockStyleEl = null
+
   function normalizeLevel(value) {
     var resolved = LEVEL_ALIASES[value] || value
     return LEVELS.indexOf(resolved) >= 0 ? resolved : 'plain'
@@ -63,6 +71,55 @@
 
   function wantsSelectionButton() {
     return triggerMode === 'selection-button' || triggerMode === 'both'
+  }
+
+  // ---- 解锁划词 ----
+
+  /**
+   * 掀封印的第 ① 步：CSS。
+   *
+   * 站点用 `user-select: none` 说「不许选」。我们注入一条**优先级更高**的规则压过去
+   * （样式表里的 !important 能压住元素的行内普通样式）。
+   * 顺带排除输入框——它们本来就能选，不必多此一举。
+   *
+   * 刻意**不**覆盖 `::selection` 的颜色：那会波及所有网站（连本来正常的也变色），
+   * 为治少数站点而改全网的选中观感，不划算。少数「选了看不见」的站点，
+   * 功能仍可用（按钮出不出来只看选中内容，不看颜色），只是观感费解。
+   */
+  function applyUnlock() {
+    if (!unlockEnabled) {
+      removeUnlock()
+      return
+    }
+    if (unlockStyleEl !== null && unlockStyleEl.isConnected === true) return
+    unlockStyleEl = document.createElement('style')
+    unlockStyleEl.id = UNLOCK_STYLE_ID
+    unlockStyleEl.textContent =
+      'html body *:not(input):not(textarea):not(select){' +
+      '-webkit-user-select:text !important;user-select:text !important}'
+    ;(document.head || document.documentElement).appendChild(unlockStyleEl)
+  }
+
+  function removeUnlock() {
+    if (unlockStyleEl !== null) {
+      unlockStyleEl.remove()
+      unlockStyleEl = null
+    }
+  }
+
+  /**
+   * 掀封印的第 ② 步：按掉「看门人」。
+   *
+   * 另一派站点不用 CSS，而是监听 `selectstart` 并 preventDefault。
+   * 我们只**按住别人**（stopImmediatePropagation），**不碰默认行为**——
+   * 「不许选」这道禁令，恰恰要靠默认行为来作废。
+   *
+   * 为什么不去拦 mousedown：很多站点的按钮、拖拽、播放器全靠它，
+   * 拦了会把正常操作一起弄坏。这一派站点暂时只能靠以后的手输兜底。
+   */
+  function blockSelectStart(event) {
+    if (!unlockEnabled) return
+    event.stopImmediatePropagation()
   }
 
   function ensureHost() {
@@ -695,6 +752,10 @@
 
   // ---- 事件 ----
 
+  // 解锁划词的第 ② 步挂在这里：window 的**捕获阶段**是整条事件路上最早的一站，
+  // 站点不管把拦截器挂在 document、body 还是具体元素上，都会被我们抢先按住。
+  window.addEventListener('selectstart', blockSelectStart, true)
+
   document.addEventListener('mouseup', function (event) {
     if (host !== null && event.composedPath && event.composedPath().indexOf(host) >= 0) return
     window.setTimeout(function () {
@@ -718,7 +779,7 @@
   window.addEventListener('scroll', hideTrigger, true)
 
   chrome.storage.local.get(
-    { level: 'plain', triggerMode: 'context-menu', backend: 'dsh' },
+    { level: 'plain', triggerMode: 'context-menu', backend: 'dsh', unlockSelection: true },
     function (stored) {
       backendMode =
         stored.backend === 'custom' || stored.backend === 'free' ? stored.backend : 'dsh'
@@ -727,6 +788,9 @@
       stored.triggerMode === 'selection-button' || stored.triggerMode === 'both'
         ? stored.triggerMode
         : 'context-menu'
+      // 默认开：只有明确存成 false 才算关（老设置里没有这个键，那也是开）
+      unlockEnabled = stored.unlockSelection !== false
+      applyUnlock()
   })
 
   chrome.storage.onChanged.addListener(function (changes, area) {
@@ -745,6 +809,10 @@
     if (changes.level) {
       currentLevel = normalizeLevel(changes.level.newValue)
       syncLevelButtons()
+    }
+    if (changes.unlockSelection) {
+      unlockEnabled = changes.unlockSelection.newValue !== false
+      applyUnlock()
     }
   })
 })()

@@ -115,6 +115,35 @@ check('options.html：有触发方式选择，且默认项是右键菜单',
 check('options.js：保存触发方式',
   fs.readFileSync(path.join(extDir, 'options.js'), 'utf8').includes('triggerMode'))
 
+// 4.5) 解锁划词：有的网站明文禁止选中，划不动就无从问起
+check('content.js：注入解锁样式，掀掉 user-select: none',
+  contentSource.includes('user-select:text !important') &&
+  contentSource.includes('var UNLOCK_STYLE_ID'))
+check('content.js：解锁样式排除了输入框（它们本来就能选）',
+  contentSource.includes(':not(input):not(textarea)'))
+check('content.js：在捕获阶段按住 selectstart 拦截器',
+  contentSource.includes("window.addEventListener('selectstart'") &&
+  contentSource.includes('stopImmediatePropagation'))
+check('content.js：只挡拦截器、不挡默认行为（否则「不许选」照样生效）', (() => {
+  const start = contentSource.indexOf('function blockSelectStart')
+  if (start < 0) return false
+  return !contentSource.slice(start, start + 200).includes('preventDefault')
+})())
+check('content.js：解锁默认开着（老设置里没这个键，也算开）',
+  contentSource.includes('unlockSelection: true') &&
+  contentSource.includes('stored.unlockSelection !== false'))
+check('content.js：关掉之后能撤掉解锁样式（不是一掀了之）',
+  contentSource.includes('function removeUnlock') && contentSource.includes('applyUnlock()'))
+check('content.js：这个开关一改也立即生效',
+  contentSource.includes('changes.unlockSelection'))
+check('options.html：设置页有「解锁划词」开关',
+  htmlSource.includes('id="unlockSelection"'))
+check('options.js：读它、并且两个保存分支都带上它（否则一保存就被抹掉）', (() => {
+  const src = fs.readFileSync(path.join(extDir, 'options.js'), 'utf8')
+  return src.includes('unlockSelection: true') &&
+    (src.match(/unlockSelection: \$\(/g) || []).length >= 2
+})())
+
 // 5) 追问、网页上下文、钉住、多轮透传
 check('content.js：收集网页上下文（段落 / 标题 / 页面）',
   contentSource.includes('collectPageContext') &&

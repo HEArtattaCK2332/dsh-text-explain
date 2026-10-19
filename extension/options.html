@@ -203,7 +203,7 @@
     <div class="card">
       <label for="level">默认讲法</label>
       <select id="level">
-        <option value="plain">小白 —— 完全不懂 AI、不懂代码的人</option>
+        <option value="plain">小白 —— 完全没接触过这方面知识的人</option>
         <option value="general">通识 —— 会用电脑、有常识，但没学过这一行</option>
         <option value="pro">专业 —— 同行：术语直接用，讲机制、取舍与边界</option>
       </select>
@@ -222,6 +222,22 @@
           浮窗底部那个按钮的行为。选前者会调用本机 DSH 开一个新会话（<b>不唤醒模型、不花额度</b>），
           并把 DSH 页面切到前台；选后者只往剪贴板里放一段 Markdown。
           注意：选了「我自己的 API」时这里只能是复制——没有 DSH 可开会话。
+        </div>
+      </div>
+
+      <div class="field">
+        <label>在禁止选字的网站上也能划词</label>
+        <div class="radio">
+          <input type="checkbox" id="unlockSelection" />
+          <span>
+            <b>解锁划词（推荐开着）</b>
+            有些网站明文禁止选中文字（多半是怕被复制），于是你划不动它、右键菜单也不出现
+            ——想弄懂一句话却问不了。开着它，扩展会替你把那层封印掀开。
+            <b>代价</b>：地图、拖拽排序这类界面上可能多出「选中蓝」；觉得别扭就关掉它。
+          </span>
+        </div>
+        <div class="muted">
+          只掀「不许选」这一条：不碰网站的复制按钮、不改它的任何数据、也不新增任何权限。
         </div>
       </div>
     </details>

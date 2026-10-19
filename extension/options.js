@@ -223,7 +223,8 @@ function load() {
       customApiKey: '',
       customModel: '',
       customSystemMerged: false,
-      customNoStream: false
+      customNoStream: false,
+      unlockSelection: true
     },
     function (stored) {
       $('backend-dsh').checked = stored.backend !== 'custom'
@@ -237,6 +238,8 @@ function load() {
       triggerInput.value =
         TRIGGER_MODES.indexOf(stored.triggerMode) >= 0 ? stored.triggerMode : 'context-menu'
       handoffInput.value = stored.handoffMode === 'clipboard' ? 'clipboard' : 'session'
+      // 默认开：老设置里没这个键时也要勾上（否则用户一进设置页会以为它被关了）
+      $('unlockSelection').checked = stored.unlockSelection !== false
       $('backend-free').checked = stored.backend === 'free'
       if (stored.freeServiceId) freePickInput.value = stored.freeServiceId
       freeKeyInput.value = stored.freeApiKey || ''
@@ -274,6 +277,7 @@ $('save').addEventListener('click', function () {
         customModel: modelInput.value.trim(),
         customSystemMerged: $('customSystemMerged').checked,
         customNoStream: $('customNoStream').checked,
+        unlockSelection: $('unlockSelection').checked,
         level: LEVELS.indexOf(levelInput.value) >= 0 ? levelInput.value : 'plain',
         triggerMode:
           TRIGGER_MODES.indexOf(triggerInput.value) >= 0 ? triggerInput.value : 'context-menu',
@@ -299,6 +303,7 @@ $('save').addEventListener('click', function () {
         // 不必为免费模式再加一套取值分支。
         customBaseUrl: freeService.baseUrl,
         customModel: freeService.model,
+        unlockSelection: $('unlockSelection').checked,
         level: LEVELS.indexOf(levelInput.value) >= 0 ? levelInput.value : 'plain',
         triggerMode:
           TRIGGER_MODES.indexOf(triggerInput.value) >= 0 ? triggerInput.value : 'context-menu',
